@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #161512;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Custom scrollbar for move log */
+.move-log::-webkit-scrollbar {
+  width: 6px;
+}
+
+.move-log::-webkit-scrollbar-track {
+  background: #262421;
+}
+
+.move-log::-webkit-scrollbar-thumb {
+  background: #454341;
+  border-radius: 3px;
+}
+
+.move-log::-webkit-scrollbar-thumb:hover {
+  background: #5a5855;
+}

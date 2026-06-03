@@ -1,0 +1,11 @@
+# --- Runtime (API + engine) ---
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-chess>=1.999
+pydantic>=2.5.0
+
+# --- Optional: only needed for the legacy neural-net training scripts ---
+# The live engine (ai_engine.py) is pure Python and does NOT import torch.
+# torch>=2.0.0
+# numpy>=1.24.0
+# tqdm>=4.65.0
