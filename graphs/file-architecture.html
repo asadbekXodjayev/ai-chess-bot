@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chess AI Bot — File Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #fafbfc; color: #333; overflow: hidden; }
+  code, .mono { font-family: 'IBM Plex Mono', monospace; }
+
+  nav { position: fixed; top: 0; left: 0; right: 0; height: 48px; background: #ffffff;
+        border-bottom: 1px solid #ddd; display: flex; align-items: center; padding: 0 24px; z-index: 100; }
+  nav .brand { font-size: 14px; font-weight: 600; }
+  nav .links { flex: 1; display: flex; justify-content: center; gap: 28px; }
+  nav .links a { font-size: 13px; color: #333; text-decoration: none; }
+  nav .links a.active { color: #2a6099; text-decoration: underline; }
+  nav .links a:hover { color: #2a6099; }
+  nav .stamp { font-size: 11px; color: #999; }
+
+  main { position: fixed; top: 48px; left: 0; right: 0; bottom: 0; }
+  .toolbar { position: absolute; top: 12px; left: 16px; z-index: 20; display: flex; gap: 8px; align-items: center; }
+  .toolbar input { font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 6px 10px;
+       border: 1px solid #ccc; border-radius: 4px; width: 240px; background: #fff; }
+  .toolbar button { font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; padding: 6px 12px;
+       background: #fff; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; }
+  .toolbar button:hover { border-color: #2a6099; color: #2a6099; }
+  .toolbar .hint { font-size: 11px; color: #999; }
+
+  svg#tree { width: 100%; height: 100%; cursor: grab; display: block; }
+  svg#tree:active { cursor: grabbing; }
+  svg .node { cursor: pointer; }
+
+  /* legend */
+  #legend { position: absolute; top: 12px; right: 16px; z-index: 20; background: #fff;
+       border: 1px solid #ddd; border-radius: 4px; padding: 10px 14px; font-size: 11px; width: 215px; }
+  #legend h4 { margin: 0 0 8px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #666; }
+  #legend .row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  #legend .tag { width: 28px; height: 14px; border-radius: 2px; font-family: 'IBM Plex Mono', monospace;
+       font-size: 8px; color: #fff; display: flex; align-items: center; justify-content: center; flex: none; }
+  #legend .dot { width: 8px; height: 8px; border-radius: 50%; background: #2a6099; flex: none; margin: 0 10px; }
+  #legend .dashedbox { width: 24px; height: 12px; border: 1px dashed #7aaecc; flex: none; margin: 0 2px; }
+  #legend .genbox { width: 24px; height: 12px; border: 1px solid #ccc; background: #f5f5f5; flex: none; margin: 0 2px; }
+
+  /* side panel */
+  #panel { position: absolute; top: 0; right: -320px; width: 300px; height: 100%; background: #fff;
+       border-left: 1px solid #ddd; z-index: 30; transition: right .22s ease; overflow-y: auto; padding: 18px; }
+  #panel.open { right: 0; }
+  #panel h3 { margin: 0 0 2px; font-size: 15px; }
+  #panel .path { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: #666; word-break: break-all; margin-bottom: 14px; }
+  #panel .sec { margin-bottom: 14px; }
+  #panel .sec h5 { margin: 0 0 4px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #999; }
+  #panel .sec div, #panel .sec li { font-size: 12px; }
+  #panel ul { margin: 0; padding-left: 16px; }
+  #panel ul.mono li { font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.6; }
+  #panel .close { position: absolute; top: 10px; right: 12px; cursor: pointer; border: none;
+       background: none; font-size: 16px; color: #999; }
+  #panel .badge { display: inline-block; font-size: 10.5px; background: #eef3f8; color: #2a6099;
+       border-radius: 3px; padding: 2px 8px; }
+  #panel .none { color: #aaa; font-style: italic; font-size: 11.5px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="brand">Chess AI Bot</span>
+  <span class="links">
+    <a href="index.html">Overview</a>
+    <a href="file-architecture.html" class="active">File Architecture</a>
+    <a href="system-design.html">System Design</a>
+  </span>
+  <span class="stamp">Generated 2026-06-04T16:17:46+05:00</span>
+</nav>
+
+<main>
+  <div class="toolbar">
+    <input id="search" type="text" placeholder="search files… (e.g. engine, .jsx)" autocomplete="off">
+    <button id="resetView">Reset View</button>
+    <span class="hint">scroll = zoom · drag = pan · click dir = collapse · click file = details</span>
+  </div>
+
+  <div id="legend">
+    <h4>Legend</h4>
+    <div class="row"><span class="tag" style="background:#3572A5">PY</span> Python source</div>
+    <div class="row"><span class="tag" style="background:#2a7ab0">JSX</span> React component</div>
+    <div class="row"><span class="tag" style="background:#b29a36">JS</span> JavaScript config</div>
+    <div class="row"><span class="tag" style="background:#563d7c">CSS</span> Stylesheet</div>
+    <div class="row"><span class="tag" style="background:#e34c26">HTML</span> HTML document</div>
+    <div class="row"><span class="tag" style="background:#6b9e47">JSON</span> JSON manifest</div>
+    <div class="row"><span class="tag" style="background:#8a9aa5">MD</span> Markdown doc</div>
+    <div class="row"><span class="tag" style="background:#777777">TXT</span> Plain text</div>
+    <div class="row"><span class="tag" style="background:#c25b9e">PTH</span> PyTorch weights</div>
+    <div class="row"><span class="tag" style="background:#999999">CFG</span> Dotfile config</div>
+    <div class="row"><span class="dot"></span> Entry point</div>
+    <div class="row"><span class="dashedbox"></span> Test file <i style="color:#aaa">(none detected)</i></div>
+    <div class="row"><span class="genbox"></span> Generated / artifact</div>
+  </div>
+
+  <svg id="tree" viewBox="0 0 1400 760">
+    <defs></defs>
+    <g id="viewport"></g>
+  </svg>
+
+  <aside id="panel">
+    <button class="close" id="panelClose" aria-label="Close panel">✕</button>
+    <h3 id="pName"></h3>
+    <div class="path" id="pPath"></div>
+    <div class="sec"><h5>Type · Role</h5><div id="pRole"></div></div>
+    <div class="sec"><h5>Approx. line count</h5><div id="pLines" class="mono"></div></div>
+    <div class="sec"><h5>Detected imports</h5><div id="pImports"></div></div>
+    <div class="sec"><h5>Detected exports</h5><div id="pExports"></div></div>
+    <div class="sec"><h5>Imported by (reverse deps)</h5><div id="pRev"></div></div>
+    <div class="sec" id="pNoteSec" style="display:none"><h5>Note</h5><div id="pNote"></div></div>
+  </aside>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  const NS = 'http://www.w3.org/2000/svg';
+
+  // ------------------------------------------------------------------------
+  // File tree data — extracted from the actual repository contents.
+  // (node_modules/, venv/, __pycache__/ and .git/ are omitted: dependency /
+  //  interpreter caches, not project source.)
+  // ------------------------------------------------------------------------
+  const TAGS = {
+    PY:   '#3572A5', JSX: '#2a7ab0', JS: '#b29a36', CSS: '#563d7c', HTML: '#e34c26',
+    JSON: '#6b9e47', MD: '#8a9aa5', TXT: '#777777', PTH: '#c25b9e', CFG: '#999999'
+  };
+
+  const TREE = {
+    name: '4-chess bot/', dir: true, children: [
+      { name: 'backend/', dir: true, children: [
+        { name: 'main.py', tag: 'PY', entry: true, role: 'Route Handler / Controller', lines: 143,
+          path: 'backend/main.py',
+          imports: ['logging', 'typing (Optional)', 'chess  (python-chess)', 'fastapi (FastAPI, HTTPException)', 'fastapi.middleware.cors (CORSMiddleware)', 'pydantic (BaseModel)', 'ai_engine (DEFAULT_LEVEL, LEVELS, engine)'],
+          exports: ['app  (FastAPI instance)', 'BotMoveRequest', 'BotMoveResponse', 'read_root()  GET /', 'get_levels()  GET /api/levels', 'get_bot_move()  POST /api/bot-move'],
+          rev: ['(ASGI entry point — loaded by uvicorn as "main:app")'] },
+        { name: 'ai_engine.py', tag: 'PY', role: 'Service (chess engine)', lines: 727,
+          path: 'backend/ai_engine.py',
+          imports: ['__future__ (annotations)', 'math', 'random', 'time', 'dataclasses (dataclass)', 'typing (Dict, List, Optional, Tuple)', 'chess  (python-chess)'],
+          exports: ['ChessEngine', 'Level  (dataclass)', 'SearchResult  (dataclass)', 'LEVELS / DEFAULT_LEVEL', 'OPENING_BOOK', 'engine  (module singleton)', 'ai_instance  (alias)', 'get_best_move()'],
+          rev: ['backend/main.py', 'backend/train_ai.py  (broken import)', 'backend/train_model.py  (broken import)'] },
+        { name: 'train_ai.py', tag: 'PY', role: 'Build Script (legacy NN training — broken)', lines: 226,
+          path: 'backend/train_ai.py',
+          imports: ['chess', 'torch / torch.nn / torch.optim', 'torch.utils.data (Dataset, DataLoader)', 'numpy', 'random', 'tqdm', 'os', 'ai_engine (ChessNeuralNetwork, BoardEncoder, PIECE_VALUES) — symbols removed from ai_engine; import fails'],
+          exports: ['ChessPositionDataset', 'Trainer', 'main()'], rev: ['(none)'],
+          note: 'Legacy: targets the old torch NN engine. ChessNeuralNetwork / BoardEncoder / PIECE_VALUES no longer exist in ai_engine.py, so this script raises ImportError. Output target was chess_model.pth.' },
+        { name: 'train_ai_fast.py', tag: 'PY', role: 'Build Script (legacy NN training — self-contained)', lines: 223,
+          path: 'backend/train_ai_fast.py',
+          imports: ['chess', 'torch / torch.nn / torch.optim', 'torch.utils.data (Dataset, DataLoader)', 'numpy', 'random', 'tqdm', 'os'],
+          exports: ['EfficientChessNetwork  (768→64→32→1)', 'BoardEncoder', 'FastChessDataset', 'train_fast_model()'], rev: ['(none)'],
+          note: 'Legacy but self-contained (defines its own network). Requires torch, which is commented out of requirements.txt. Produces chess_model_fast.pth.' },
+        { name: 'train_model.py', tag: 'PY', role: 'Build Script (legacy NN training — broken)', lines: 428,
+          path: 'backend/train_model.py',
+          imports: ['chess', 'torch / torch.nn / torch.optim', 'torch.utils.data (Dataset, DataLoader)', 'numpy', 'random', 'os', 'time', 'argparse', 'pathlib (Path)', 'datetime', 'matplotlib (lazy, for loss plot)', 'ai_engine (ChessNeuralNetwork, BoardEncoder, NeuralNetworkChessAI, DEVICE, PIECE_VALUES) — symbols removed; import fails'],
+          exports: ['ChessPositionDataset', 'ChessModelTrainer', 'evaluate_model()', 'main()  (argparse CLI)'],
+          rev: ['quick_train.py  (via subprocess "python train_model.py")'],
+          note: 'Legacy CLI trainer (--epochs, --train-size, --model-path…). Broken for the same reason as train_ai.py. Output target: chess_model.pth + checkpoints/.' },
+        { name: '__init__.py', tag: 'PY', role: 'Utility (package marker, empty)', lines: 0,
+          path: 'backend/__init__.py', imports: [], exports: [], rev: ['(none — marks backend/ as a package)'] },
+        { name: 'requirements.txt', tag: 'TXT', role: 'Configuration (Python dependencies)', lines: 11,
+          path: 'backend/requirements.txt', imports: [],
+          exports: ['fastapi>=0.109.0', 'uvicorn[standard]>=0.27.0', 'python-chess>=1.999', 'pydantic>=2.5.0', '# torch / numpy / tqdm (commented out — legacy only)'],
+          rev: ['(consumed by pip install -r)'] },
+        { name: 'TRAINING.md', tag: 'MD', role: 'Documentation (stale — describes removed NN engine)', lines: 254,
+          path: 'backend/TRAINING.md', imports: [], exports: [], rev: ['README.md (link)'] },
+        { name: 'chess_model.pth', tag: 'PTH', gen: true, role: 'Static Asset (generated — unused at runtime)', lines: null, size: '2.2 MB',
+          path: 'backend/chess_model.pth', imports: [], exports: [],
+          rev: ['(none — ai_engine.py never loads it)'],
+          note: 'Trained weights from the legacy torch pipeline. The live engine is pure Python and ignores this file.' },
+        { name: 'chess_model_fast.pth', tag: 'PTH', gen: true, role: 'Static Asset (generated — unused at runtime)', lines: null, size: '204 KB',
+          path: 'backend/chess_model_fast.pth', imports: [], exports: [],
+          rev: ['(none — ai_engine.py never loads it)'],
+          note: 'Weights produced by train_ai_fast.py (EfficientChessNetwork). Not loaded by anything in the request path.' },
+      ]},
+      { name: 'frontend/', dir: true, children: [
+        { name: 'src/', dir: true, children: [
+          { name: 'App.jsx', tag: 'JSX', role: 'UI Component (entire game UI + API client)', lines: 797,
+            path: 'frontend/src/App.jsx',
+            imports: ['react (React, useState, useCallback, useRef, useEffect)', 'react-chessboard (Chessboard)', 'chess.js (Chess)'],
+            exports: ['App  (default)', '— internal: SoundController, getCaptured(), evalToWhitePct(), formatEval(), SetupSection, Clock, InfoRow'],
+            rev: ['frontend/src/main.jsx'],
+            note: 'Single-file app: setup screen, board, clocks, eval bar, move log, Web-Audio sound synthesis, and the fetch() call to http://localhost:8000/api/bot-move (API_URL hardcoded at line 154).' },
+          { name: 'main.jsx', tag: 'JSX', entry: true, role: 'UI Component (React bootstrap)', lines: 9,
+            path: 'frontend/src/main.jsx',
+            imports: ['react', 'react-dom/client (ReactDOM)', './App.jsx', './index.css'],
+            exports: ['(none — side-effect module: ReactDOM.createRoot(#root).render(<App/>))'],
+            rev: ['frontend/index.html  (<script type="module" src="/src/main.jsx">)'] },
+          { name: 'index.css', tag: 'CSS', role: 'Static Asset (global styles)', lines: 37,
+            path: 'frontend/src/index.css',
+            imports: ['@tailwind base / components / utilities'],
+            exports: ['body background #161512', '#root flex layout', '.move-log scrollbar styling'],
+            rev: ['frontend/src/main.jsx'] },
+        ]},
+        { name: 'index.html', tag: 'HTML', entry: true, role: 'Static Asset (Vite HTML entry)', lines: 12,
+          path: 'frontend/index.html',
+          imports: ['/src/main.jsx  (module script)', '/vite.svg  (favicon — referenced, not present in repo)'],
+          exports: ['<div id="root">'], rev: ['(served by Vite dev server / dist build)'] },
+        { name: 'package.json', tag: 'JSON', role: 'Configuration (npm manifest — chess-frontend v1.0.0)', lines: 26,
+          path: 'frontend/package.json', imports: [],
+          exports: ['scripts: dev / build / lint / preview', 'deps: react, react-dom, react-chessboard, chess.js', 'devDeps: vite, @vitejs/plugin-react, tailwindcss, postcss, autoprefixer, @types/react*'],
+          rev: ['(consumed by npm)'] },
+        { name: 'package-lock.json', tag: 'JSON', gen: true, role: 'Configuration (generated lockfile)', lines: null,
+          path: 'frontend/package-lock.json', imports: [], exports: [], rev: ['(consumed by npm ci/install)'] },
+        { name: 'vite.config.js', tag: 'JS', role: 'Configuration (build / dev server)', lines: 14,
+          path: 'frontend/vite.config.js',
+          imports: ['vite (defineConfig)', '@vitejs/plugin-react'],
+          exports: ['default config — port 5173, proxy /api → http://localhost:8000 (unused: App.jsx calls the absolute URL)'],
+          rev: ['(consumed by Vite CLI)'] },
+        { name: 'tailwind.config.js', tag: 'JS', role: 'Configuration (Tailwind theme)', lines: 20,
+          path: 'frontend/tailwind.config.js', imports: [],
+          exports: ['content globs: index.html, src/**/*.{js,ts,jsx,tsx}', 'theme colors: chess-dark #161512, board #769656/#eeeed2, accent #81b64c'],
+          rev: ['(consumed by Tailwind via PostCSS)'] },
+        { name: 'postcss.config.js', tag: 'JS', role: 'Configuration (PostCSS plugins)', lines: 5,
+          path: 'frontend/postcss.config.js', imports: [],
+          exports: ['plugins: tailwindcss, autoprefixer'], rev: ['(consumed by Vite CSS pipeline)'] },
+      ]},
+      { name: 'quick_train.py', tag: 'PY', role: 'Build Script (interactive trainer launcher — legacy)', lines: 95,
+        path: 'quick_train.py',
+        imports: ['subprocess', 'sys', 'os'],
+        exports: ['run_training()  (interactive preset menu)'],
+        rev: ['(none — run directly; chdir backend/ then subprocess: python train_model.py …)'],
+        note: 'Interactive wrapper around the broken legacy trainer; would fail at train_model.py import time.' },
+      { name: 'README.md', tag: 'MD', role: 'Documentation (stale — describes removed NN engine)', lines: 258,
+        path: 'README.md', imports: [], exports: [], rev: ['(none)'],
+        note: 'Describes "PyTorch Neural Network + Minimax depth 3" — superseded by the pure-Python alpha-beta engine documented in CLAUDE.md and description.md.' },
+      { name: 'BUG_FIXES.md', tag: 'MD', role: 'Documentation (stale bug report for old NN design)', lines: 153,
+        path: 'BUG_FIXES.md', imports: [], exports: [], rev: ['README.md (link)'] },
+      { name: 'UPDATES.md', tag: 'MD', role: 'Documentation (stale changelog for old NN design)', lines: 216,
+        path: 'UPDATES.md', imports: [], exports: [], rev: ['(none)'] },
+      { name: 'description.md', tag: 'MD', role: 'Documentation (current — run & deploy guide)', lines: 198,
+        path: 'description.md', imports: [], exports: [], rev: ['(none)'],
+        note: 'Authoritative deploy doc: server requirements, systemd unit, nginx config, and the two pre-deploy edits (API_URL in App.jsx, CORS allowlist in main.py).' },
+      { name: 'CLAUDE.md', tag: 'MD', role: 'Documentation (current — agent/codebase guide)', lines: 99,
+        path: 'CLAUDE.md', imports: [], exports: [], rev: ['(none)'] },
+      { name: '.gitignore', tag: 'CFG', role: 'Configuration (VCS ignore rules)', lines: 48,
+        path: '.gitignore', imports: [],
+        exports: ['ignores: __pycache__/, venv/, node_modules/, dist/, .env*, logs'], rev: ['(consumed by git)'] },
+    ]
+  };
+
+  // ------------------------------------------------------------------------
+  // Layout (tidy tree, leaves on fixed slots, parents centered)
+  // ------------------------------------------------------------------------
+  const LEAF_W = 70, LEAF_H = 24, DIR_W = 80, DIR_H = 28;
+  const H_SP = 120, V_SP = 180, TOP = 90;
+  const vp = document.getElementById('viewport');
+  const svg = document.getElementById('tree');
+  let cursor = 0;
+
+  function el(tag, attrs, text) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  function layout(node, depth) {
+    node.depth = depth;
+    node.y = TOP + depth * V_SP;
+    if (node.dir && node.children && !node.collapsed) {
+      node.children.forEach(c => layout(c, depth + 1));
+      const xs = node.children.map(c => c.x);
+      node.x = (Math.min(...xs) + Math.max(...xs)) / 2;
+    } else {
+      node.x = 80 + cursor * H_SP;
+      cursor++;
+    }
+  }
+
+  function flatten(node, out) {
+    out.push(node);
+    if (node.dir && node.children && !node.collapsed) node.children.forEach(c => flatten(c, out));
+    return out;
+  }
+
+  function render() {
+    cursor = 0;
+    layout(TREE, 0);
+    vp.innerHTML = '';
+    const nodes = flatten(TREE, []);
+
+    // edges first (under nodes)
+    nodes.forEach(n => {
+      if (!(n.dir && n.children && !n.collapsed)) return;
+      const ph = n === TREE || n.dir ? DIR_H : LEAF_H;
+      n.children.forEach(c => {
+        const midY = c.y - 34;
+        const d = 'M' + n.x + ' ' + (n.y + ph) + ' V ' + midY + ' H ' + c.x + ' V ' + c.y;
+        vp.appendChild(el('path', { d, fill: 'none', stroke: '#444', 'stroke-width': 1.2 }));
+      });
+    });
+
+    // nodes
+    nodes.forEach(n => {
+      const isDir = !!n.dir;
+      const w = isDir ? DIR_W : LEAF_W, h = isDir ? DIR_H : LEAF_H;
+      const x = n.x - w / 2, y = n.y;
+      const g = el('g', { class: 'node', 'data-name': (n.path || n.name).toLowerCase() });
+      g.appendChild(el('rect', { x, y, width: w, height: h, rx: 3, ry: 3,
+        fill: n.gen ? '#f5f5f5' : (isDir ? '#cde4f5' : '#e9f2fa'),
+        stroke: n.test ? '#7aaecc' : '#7aaecc', 'stroke-width': 1,
+        'stroke-dasharray': n.test ? '4,3' : 'none', class: 'nodebody' }));
+      if (isDir) { // double top border to suggest a folder
+        g.appendChild(el('line', { x1: x, y1: y + 4, x2: x + w, y2: y + 4, stroke: '#7aaecc', 'stroke-width': 1 }));
+      }
+      if (n.tag) { // file type tag, top-right
+        g.appendChild(el('rect', { x: x + w - 14, y: y - 7, width: 28, height: 14, rx: 2,
+          fill: TAGS[n.tag] || '#999' }));
+        g.appendChild(el('text', { x: x + w, y: y + 3.5, 'text-anchor': 'middle',
+          'font-family': "'IBM Plex Mono',monospace", 'font-size': 8, fill: '#fff' }, n.tag));
+      }
+      if (n.entry) { // entry-point marker, top-left
+        g.appendChild(el('circle', { cx: x, cy: y, r: 4, fill: '#2a6099' }));
+      }
+      g.appendChild(el('text', { x: n.x, y: y + h + 13, 'text-anchor': 'middle',
+        'font-family': "'IBM Plex Sans',sans-serif", 'font-size': 11,
+        fill: n.gen ? '#999' : '#333', 'font-weight': isDir ? 600 : 400,
+        stroke: '#fafbfc', 'stroke-width': 3.5, 'paint-order': 'stroke',
+        'stroke-linejoin': 'round' }, n.name));
+      if (n.collapsed) {
+        g.appendChild(el('text', { x: n.x, y: y + h / 2 + 4, 'text-anchor': 'middle',
+          'font-family': "'IBM Plex Sans',sans-serif", 'font-size': 12, fill: '#2a6099' }, '+'));
+      }
+      g.addEventListener('click', e => { e.stopPropagation(); onNodeClick(n); });
+      vp.appendChild(g);
+    });
+    applySearch();
+  }
+
+  // ------------------------------------------------------------------------
+  // Interactions
+  // ------------------------------------------------------------------------
+  const panel = document.getElementById('panel');
+  function onNodeClick(n) {
+    if (n.dir) { n.collapsed = !n.collapsed; render(); return; }
+    document.getElementById('pName').textContent = n.name;
+    document.getElementById('pPath').textContent = '4-chess bot/' + (n.path || n.name);
+    document.getElementById('pRole').innerHTML = '<span class="badge">' + (n.tag || '') + '</span> &nbsp;' + (n.role || '—');
+    document.getElementById('pLines').textContent = n.lines == null ? (n.size ? 'binary · ' + n.size : '[unresolved]') : (n.lines + ' lines');
+    fillList('pImports', n.imports);
+    fillList('pExports', n.exports);
+    fillList('pRev', n.rev);
+    const noteSec = document.getElementById('pNoteSec');
+    if (n.note) { noteSec.style.display = ''; document.getElementById('pNote').textContent = n.note; }
+    else noteSec.style.display = 'none';
+    panel.classList.add('open');
+  }
+  function fillList(id, arr) {
+    const elx = document.getElementById(id);
+    if (!arr || !arr.length) { elx.innerHTML = '<span class="none">none</span>'; return; }
+    elx.innerHTML = '<ul class="mono">' + arr.map(s =>
+      '<li>' + s.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</li>').join('') + '</ul>';
+  }
+  document.getElementById('panelClose').addEventListener('click', () => panel.classList.remove('open'));
+
+  // search highlight
+  const searchInput = document.getElementById('search');
+  function applySearch() {
+    const q = searchInput.value.trim().toLowerCase();
+    vp.querySelectorAll('g.node').forEach(g => {
+      const body = g.querySelector('.nodebody');
+      if (!q) { g.setAttribute('opacity', 1); body.setAttribute('stroke', '#7aaecc'); body.setAttribute('stroke-width', 1); return; }
+      if (g.getAttribute('data-name').includes(q)) {
+        g.setAttribute('opacity', 1);
+        body.setAttribute('stroke', '#e6c200'); body.setAttribute('stroke-width', 2.5);
+      } else {
+        g.setAttribute('opacity', 0.2);
+        body.setAttribute('stroke', '#7aaecc'); body.setAttribute('stroke-width', 1);
+      }
+    });
+  }
+  searchInput.addEventListener('input', applySearch);
+
+  // pan & zoom
+  let s = 0.42, tx = 30, ty = 10, drag = null;
+  function apply() { vp.setAttribute('transform', 'translate(' + tx + ',' + ty + ') scale(' + s + ')'); }
+  svg.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    const r = svg.getBoundingClientRect();
+    const mx = (e.clientX - r.left) * (1400 / r.width), my = (e.clientY - r.top) * (760 / r.height);
+    const f = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    const ns = Math.min(8, Math.max(0.1, s * f));
+    tx = mx - (mx - tx) * (ns / s); ty = my - (my - ty) * (ns / s); s = ns; apply();
+  }, { passive: false });
+  svg.addEventListener('mousedown', function (e) {
+    if (e.target.closest('g.node')) return;
+    drag = { x: e.clientX, y: e.clientY, tx, ty };
+  });
+  window.addEventListener('mousemove', function (e) {
+    if (!drag) return;
+    const r = svg.getBoundingClientRect();
+    tx = drag.tx + (e.clientX - drag.x) * (1400 / r.width);
+    ty = drag.ty + (e.clientY - drag.y) * (760 / r.height);
+    apply();
+  });
+  window.addEventListener('mouseup', function () { drag = null; });
+  document.getElementById('resetView').addEventListener('click', function () { s = 0.42; tx = 30; ty = 10; apply(); });
+
+  render();
+  apply();
+})();
+</script>
+</body>
+</html>

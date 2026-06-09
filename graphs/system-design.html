@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chess AI Bot — System Design &amp; Application Flows</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #fafbfc; color: #333; }
+  code, .mono { font-family: 'IBM Plex Mono', monospace; }
+
+  nav { position: fixed; top: 0; left: 0; right: 0; height: 48px; background: #ffffff;
+        border-bottom: 1px solid #ddd; display: flex; align-items: center; padding: 0 24px; z-index: 100; }
+  nav .brand { font-size: 14px; font-weight: 600; }
+  nav .links { flex: 1; display: flex; justify-content: center; gap: 28px; }
+  nav .links a { font-size: 13px; color: #333; text-decoration: none; }
+  nav .links a.active { color: #2a6099; text-decoration: underline; }
+  nav .links a:hover { color: #2a6099; }
+  nav .stamp { font-size: 11px; color: #999; }
+
+  main { max-width: 1160px; margin: 0 auto; padding: 80px 24px 64px; }
+  section { margin-bottom: 56px; }
+  section > h2 { font-size: 13px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase;
+                 color: #666; border-bottom: 1px solid #ddd; padding-bottom: 8px; }
+
+  figure { margin: 0; background: #fff; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; position: relative; }
+  figure svg { display: block; width: 100%; height: auto; cursor: grab; }
+  figure svg:active { cursor: grabbing; }
+  figcaption { font-size: 12px; color: #666; padding: 10px 14px; border-top: 1px solid #eee; }
+  .svg-toolbar { display: flex; justify-content: flex-end; padding: 6px 8px; border-bottom: 1px solid #eee; gap: 8px; }
+  .svg-toolbar button { font-family: 'IBM Plex Sans', sans-serif; font-size: 11px; padding: 4px 10px;
+       background: #fff; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; color: #333; }
+  .svg-toolbar button:hover { border-color: #2a6099; color: #2a6099; }
+
+  /* side panel (topology node details) */
+  #panel { position: fixed; top: 48px; right: -320px; width: 300px; height: calc(100% - 48px); background: #fff;
+       border-left: 1px solid #ddd; z-index: 90; transition: right .22s ease; overflow-y: auto; padding: 18px; }
+  #panel.open { right: 0; }
+  #panel h3 { margin: 0 0 2px; font-size: 15px; }
+  #panel .tech { font-size: 12px; font-style: italic; color: #666; margin-bottom: 14px; }
+  #panel .sec { margin-bottom: 14px; }
+  #panel .sec h5 { margin: 0 0 4px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #999; }
+  #panel ul { margin: 0; padding-left: 16px; }
+  #panel ul li { font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.6; }
+  #panel .close { position: absolute; top: 10px; right: 12px; cursor: pointer; border: none; background: none; font-size: 16px; color: #999; }
+  #panel .none { color: #aaa; font-style: italic; font-size: 11.5px; }
+
+  /* edge tooltip */
+  #edgeTip { position: fixed; display: none; z-index: 95; background: #fff; border: 1px solid #bbb; border-radius: 4px;
+       padding: 8px 12px; font-size: 11px; max-width: 300px; box-shadow: none; }
+  #edgeTip .t { font-weight: 600; margin-bottom: 3px; }
+  #edgeTip .d { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #555; line-height: 1.5; }
+
+  .footnotes { font-size: 12px; color: #555; background: #fff; border: 1px solid #ddd; border-radius: 4px;
+       padding: 14px 18px; margin-top: 14px; }
+  .footnotes h4 { margin: 0 0 8px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #888; }
+  .footnotes ol { margin: 0; padding-left: 18px; }
+  .footnotes li { margin-bottom: 6px; line-height: 1.5; }
+  .footnotes code { font-size: 11px; }
+
+  /* flow tabs */
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .tabs button { font-family: 'IBM Plex Sans', sans-serif; text-align: left; background: #fff; border: 1px solid #ccc;
+       border-radius: 4px; padding: 8px 14px; cursor: pointer; min-width: 150px; }
+  .tabs button .t { display: block; font-size: 13px; font-weight: 600; color: #333; }
+  .tabs button .c { display: block; font-size: 10.5px; color: #999; margin-top: 2px; }
+  .tabs button.active { border-color: #2a6099; }
+  .tabs button.active .t { color: #2a6099; }
+
+  table.steps { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #ddd; margin-top: 14px; }
+  table.steps th { text-align: left; font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase; color: #666;
+       padding: 8px 12px; border-bottom: 2px solid #ddd; font-weight: 600; }
+  table.steps td { padding: 7px 12px; border-bottom: 1px solid #eee; font-size: 12px; vertical-align: top; }
+  table.steps td.mono { font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+  table.steps tr:last-child td { border-bottom: none; }
+
+  .srcToggle { margin-top: 10px; }
+  .srcToggle pre { display: none; background: #f7f8f9; border: 1px solid #ddd; border-radius: 4px;
+       padding: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; max-height: 320px; overflow: auto; }
+  .srcToggle.open pre { display: block; }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="brand">Chess AI Bot</span>
+  <span class="links">
+    <a href="index.html">Overview</a>
+    <a href="file-architecture.html">File Architecture</a>
+    <a href="system-design.html" class="active">System Design</a>
+  </span>
+  <span class="stamp">Generated 2026-06-04T16:17:46+05:00</span>
+</nav>
+
+<main>
+
+  <!-- ====================================================================
+       PART 1 — SYSTEM TOPOLOGY
+  ===================================================================== -->
+  <section id="topology-section">
+    <h2>System Architecture — Network Topology</h2>
+    <figure>
+      <div class="svg-toolbar">
+        <button id="exportSvg">Export as SVG</button>
+        <button id="resetTopo">Reset View</button>
+      </div>
+      <svg id="topo" viewBox="0 0 1100 970" width="1100" height="970" aria-label="System topology">
+        <defs>
+          <marker id="tArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#444"/>
+          </marker>
+          <marker id="tArrD" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#888"/>
+          </marker>
+          <pattern id="cacheDots" width="6" height="6" patternUnits="userSpaceOnUse">
+            <rect width="6" height="6" fill="#e9f2fa"/>
+            <circle cx="3" cy="3" r="0.9" fill="#7aaecc"/>
+          </pattern>
+        </defs>
+        <g id="topoVp"></g>
+      </svg>
+      <figcaption>
+        Click a node for implementing files, config keys, and connections. Click an edge for full link
+        details. Dashed node border = inferred component (see footnotes); solid = verified in code/config.
+        Components: 11 · Links: 11. The app has <b>no database, cache server, message broker, auth
+        service, or third-party API</b> — all state is FEN strings on the wire plus in-process engine memory.
+      </figcaption>
+    </figure>
+
+    <div class="footnotes">
+      <h4>Confidence notation — inferred components &amp; evidence</h4>
+      <ol>
+        <li><b>Static Host (nginx / Vercel)</b> — inferred from <code>description.md</code> §3 (nginx server block for <code>frontend/dist/</code>) and §1 (“Vercel/Netlify”). No nginx/hosting config file exists in the repository.</li>
+        <li><b>Direct API Client (curl)</b> — inferred from the curl sanity-check examples in <code>description.md</code> (“API Reference”) and <code>CLAUDE.md</code> (Commands). Not a deployed component.</li>
+        <li><b>Zone 5 (External Services) is empty by evidence</b> — the only HTTP endpoints referenced anywhere in source are <code>http://localhost:8000</code> (App.jsx:154, vite.config.js) and the CORS allowlist origins (main.py:28–31). No OAuth, SMTP, CDN, analytics, or message-broker references exist.</li>
+        <li><b>Legacy NN Trainers</b> — files verified present (<code>train_ai.py</code>, <code>train_ai_fast.py</code>, <code>train_model.py</code>, <code>quick_train.py</code>), but outside the request path; <code>train_ai.py</code>/<code>train_model.py</code> import symbols (<code>ChessNeuralNetwork</code>, <code>BoardEncoder</code>, <code>PIECE_VALUES</code>…) that no longer exist in <code>ai_engine.py</code> and fail at import. torch is commented out of <code>requirements.txt</code>.</li>
+        <li><b>Environment variables</b> — none. No <code>os.environ</code>, <code>.env</code> file, or <code>import.meta.env</code> usage anywhere; all endpoints and ports are hardcoded.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ====================================================================
+       PART 2 — APPLICATION FLOWS
+  ===================================================================== -->
+  <section id="flows-section">
+    <h2>Application Flow Diagrams</h2>
+    <div class="tabs" id="flowTabs"></div>
+    <div id="flowMount"></div>
+  </section>
+
+</main>
+
+<aside id="panel">
+  <button class="close" id="panelClose" aria-label="Close">✕</button>
+  <h3 id="pName"></h3>
+  <div class="tech" id="pTech"></div>
+  <div class="sec"><h5>Implementing files</h5><div id="pFiles"></div></div>
+  <div class="sec"><h5>Config keys / constants</h5><div id="pCfg"></div></div>
+  <div class="sec"><h5>Environment variables</h5><div id="pEnv"></div></div>
+  <div class="sec"><h5>Inbound connections</h5><div id="pIn"></div></div>
+  <div class="sec"><h5>Outbound connections</h5><div id="pOut"></div></div>
+</aside>
+
+<div id="edgeTip"></div>
+
+<script>
+(function () {
+'use strict';
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text != null) e.textContent = text;
+  return e;
+}
+// haloed text: white stroke behind glyphs so connector lines never collide with labels
+function txt(x, y, str, opts) {
+  opts = opts || {};
+  const t = el('text', {
+    x, y, 'text-anchor': opts.anchor || 'middle',
+    'font-family': opts.mono ? "'IBM Plex Mono',monospace" : "'IBM Plex Sans',sans-serif",
+    'font-size': opts.size || 11, fill: opts.fill || '#333',
+    'font-weight': opts.bold ? 600 : 400,
+    stroke: opts.noHalo ? 'none' : (opts.halo || '#ffffff'),
+    'stroke-width': opts.noHalo ? 0 : 3.5,
+    'paint-order': 'stroke', 'stroke-linejoin': 'round'
+  }, str);
+  if (opts.italic) t.setAttribute('font-style', 'italic');
+  return t;
+}
+function panzoom(svg, vp, vw, vh, s0, tx0, ty0) {
+  let s = s0 || 1, tx = tx0 || 0, ty = ty0 || 0, drag = null;
+  function apply() { vp.setAttribute('transform', 'translate(' + tx + ',' + ty + ') scale(' + s + ')'); }
+  svg.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    const r = svg.getBoundingClientRect();
+    const mx = (e.clientX - r.left) * (vw / r.width), my = (e.clientY - r.top) * (vh / r.height);
+    const f = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    const ns = Math.min(8, Math.max(0.2, s * f));
+    tx = mx - (mx - tx) * (ns / s); ty = my - (my - ty) * (ns / s); s = ns; apply();
+  }, { passive: false });
+  svg.addEventListener('mousedown', function (e) {
+    if (e.target.closest('.node') || e.target.closest('.edgeHit')) return;
+    drag = { x: e.clientX, y: e.clientY, tx, ty };
+  });
+  window.addEventListener('mousemove', function (e) {
+    if (!drag) return;
+    const r = svg.getBoundingClientRect();
+    tx = drag.tx + (e.clientX - drag.x) * (vw / r.width);
+    ty = drag.ty + (e.clientY - drag.y) * (vh / r.height);
+    apply();
+  });
+  window.addEventListener('mouseup', function () { drag = null; });
+  apply();
+  return { reset: function () { s = s0 || 1; tx = tx0 || 0; ty = ty0 || 0; apply(); } };
+}
+
+/* =========================================================================
+   PART 1 — TOPOLOGY
+========================================================================= */
+const tvp = document.getElementById('topoVp');
+const tsvg = document.getElementById('topo');
+
+const zones = [
+  { y: 50,  h: 150, label: 'zone 1 — external / client' },
+  { y: 240, h: 150, label: 'zone 2 — edge' },
+  { y: 430, h: 160, label: 'zone 3 — application' },
+  { y: 630, h: 160, label: 'zone 4 — data (in-process memory · disk artifacts)' },
+  { y: 830, h: 100, label: 'zone 5 — external services' },
+];
+zones.forEach(z => {
+  tvp.appendChild(el('rect', { x: 40, y: z.y, width: 1020, height: z.h,
+    fill: 'rgba(0,0,0,0.02)', stroke: '#aaa', 'stroke-width': 1, 'stroke-dasharray': '5,4' }));
+  tvp.appendChild(el('text', { x: 52, y: z.y + 19, 'font-family': "'IBM Plex Sans',sans-serif",
+    'font-size': 13, fill: '#666', style: 'font-variant: small-caps; letter-spacing:1px;' }, z.label));
+});
+tvp.appendChild(txt(550, 888, 'none detected — no third-party HTTP endpoints, OAuth providers, SMTP, CDNs, or message brokers are referenced in the codebase', { italic: true, fill: '#999', size: 12 }));
+
+const NODES = {
+  browser: { cx: 420, y: 100, label: 'Browser Client', tech: 'React 18 SPA — chess.js validates locally',
+    detail: { tech: 'React ^18.2.0 · react-chessboard ^4.3.5 · chess.js ^1.0.0-beta.8',
+      files: ['frontend/src/App.jsx (797 ln)', 'frontend/src/main.jsx', 'frontend/index.html'],
+      cfg: ["API_URL = 'http://localhost:8000'  (App.jsx:154)", 'TIME_CONTROLS (bullet/blitz/rapid/classical)', 'DIFFICULTIES — keys mirror backend LEVELS'],
+      env: [], inb: ['HTML/JS/CSS from Vite :5173 (dev) or static host (prod)'],
+      out: ['POST /api/bot-move → FastAPI :8000', 'GET /api/levels → FastAPI :8000 (endpoint exists; UI uses local DIFFICULTIES list)'] } },
+  apiclient: { cx: 980, y: 100, label: 'Direct API Client', tech: 'curl / scripts  [inferred]', dashed: true,
+    detail: { tech: 'any HTTP client', files: ['description.md §2 + API Reference (curl examples)', 'CLAUDE.md Commands'],
+      cfg: [], env: [], inb: [], out: ['POST /api/bot-move, GET /api/levels → :8000 (no CORS needed outside browsers)'] } },
+  vite: { cx: 220, y: 290, label: 'Vite Dev Server', tech: ':5173 · vite ^5.0.8', lb: true,
+    detail: { tech: 'Vite ^5.0.8 + @vitejs/plugin-react ^4.2.1', files: ['frontend/vite.config.js', 'frontend/package.json (scripts.dev)'],
+      cfg: ['server.port = 5173', "proxy '/api' → http://localhost:8000 (changeOrigin) — UNUSED: App.jsx calls the absolute URL"],
+      env: [], inb: ['Browser HTTP :5173'], out: ['proxy /api → FastAPI :8000 (configured, never exercised)'] } },
+  nginx: { cx: 760, y: 290, label: 'Static Host (prod)', tech: 'nginx / Vercel — dist/  [inferred]', dashed: true, lb: true,
+    detail: { tech: 'nginx (sample server block) or Vercel/Netlify', files: ['description.md §3 (nginx config)', 'frontend/package.json (scripts.build → dist/)'],
+      cfg: ['root /opt/chess-bot/frontend/dist', 'try_files $uri /index.html'], env: [],
+      inb: ['Browser HTTPS :80/:443 (prod)'], out: ['none — static files only'] } },
+  fastapi: { cx: 340, y: 480, label: 'FastAPI · Uvicorn', tech: ':8000 — backend/main.py (API v2.0)',
+    detail: { tech: 'FastAPI >=0.109.0 on Uvicorn[standard] >=0.27.0 · Python 3.14', files: ['backend/main.py (143 ln)', 'backend/requirements.txt'],
+      cfg: ['CORS allow_origins: localhost:5173/:3000, 127.0.0.1:5173/:3000', 'routes: GET /, GET /api/levels, POST /api/bot-move', 'BotMoveRequest{current_fen, level="hard"} · BotMoveResponse (11 fields)'],
+      env: [], inb: ['Browser/curl HTTP :8000', 'Vite proxy (unused)'], out: ['in-process: engine.search(fen, level)'] } },
+  engine: { cx: 620, y: 480, label: 'ChessEngine', tech: 'ai_engine.py — negamax α/β',
+    detail: { tech: 'pure Python · python-chess >=1.999 (no torch)', files: ['backend/ai_engine.py (727 ln)'],
+      cfg: ['LEVELS: beginner…max (~600–2200 Elo)', 'time_limit 0.05–3.0 s · max_depth 1–64', 'temperature (Boltzmann) · blunder probability', 'MATE_SCORE=1,000,000 · TT key = board._transposition_key()'],
+      env: [], inb: ['main.py calls search()'], out: ['Transposition Table · Opening Book · LEVELS (in-process memory)'] } },
+  trainers: { cx: 920, y: 480, label: 'Legacy NN Trainers', tech: 'train_*.py — offline, require torch', gray: true,
+    detail: { tech: 'PyTorch (commented out of requirements.txt)', files: ['backend/train_ai.py (broken import)', 'backend/train_ai_fast.py (self-contained)', 'backend/train_model.py (broken import)', 'quick_train.py (subprocess wrapper)'],
+      cfg: ['save_path: chess_model.pth / chess_model_fast.pth'], env: [],
+      inb: ['manual CLI invocation only'], out: ['torch.save() → backend/*.pth'] } },
+  tt: { cx: 180, y: 680, label: 'Transposition Table', tech: 'dict — per-search, in-process', cache: true,
+    detail: { tech: 'Python dict, rebuilt on every search()', files: ['backend/ai_engine.py:293, 469–479, 551–559, 618'],
+      cfg: ['key: board._transposition_key()', 'value: (depth, flag, score, move) — exact/lower/upper'],
+      env: [], inb: ['_negamax probe/store'], out: [] } },
+  book: { cx: 430, y: 680, label: 'Opening Book', tech: 'OPENING_BOOK — 8 FEN keys', store: true,
+    detail: { tech: 'in-module dict (no polyglot file)', files: ['backend/ai_engine.py:259–284'],
+      cfg: ['key: piece placement + side to move', 'covers: start, 1.e4, 1.d4, Sicilian, QG, Indian'],
+      env: [], inb: ['search() FEN-prefix lookup before any tree search'], out: [] } },
+  levels: { cx: 650, y: 680, label: 'LEVELS Presets', tech: '6 difficulty configs', store: true,
+    detail: { tech: 'dict of Level dataclasses', files: ['backend/ai_engine.py:228–236'],
+      cfg: ['beginner 600 (0.05s d1 T1.6 b.20)', 'easy 1000 (0.15s d2 T0.8 b.06)', 'intermediate 1400 (0.4s d3 T0.3)', 'hard 1800 (0.8s d4) — DEFAULT', 'expert 2000 (1.5s d8)', 'max 2200 (3.0s d64)'],
+      env: [], inb: ['search() preset read', 'GET /api/levels serialization'], out: [] } },
+  pth: { cx: 920, y: 680, label: 'Model Artifacts', tech: 'chess_model*.pth — never loaded', store: true, gray: true,
+    detail: { tech: 'PyTorch state_dict files', files: ['backend/chess_model.pth (2.2 MB)', 'backend/chess_model_fast.pth (204 KB)'],
+      cfg: [], env: [], inb: ['written by legacy trainers'], out: ['none — ai_engine.py never reads them'] } },
+};
+
+function topoNode(key) {
+  const n = NODES[key];
+  const w = 120, h = 38, x = n.cx - w / 2, y = n.y;
+  const g = el('g', { class: 'node', 'data-key': key, style: 'cursor:pointer' });
+  g.appendChild(el('rect', { x, y, width: w, height: h, rx: 4, ry: 4,
+    fill: n.gray ? '#ececec' : (n.cache ? 'url(#cacheDots)' : '#cde4f5'),
+    stroke: n.gray ? '#aaaaaa' : '#7aaecc', 'stroke-width': 1.2,
+    'stroke-dasharray': n.dashed ? '5,3' : 'none' }));
+  if (n.lb) { // load-balancer / proxy: two parallel lines across top third
+    g.appendChild(el('line', { x1: x + 4, y1: y + 9,  x2: x + w - 4, y2: y + 9,  stroke: '#5b8db0', 'stroke-width': 1.4 }));
+    g.appendChild(el('line', { x1: x + 4, y1: y + 13, x2: x + w - 4, y2: y + 13, stroke: '#5b8db0', 'stroke-width': 1.4 }));
+  } else if (!n.cache) { // port-array lines
+    for (let i = 1; i <= 6; i++) {
+      const ly = y + (h * i) / 7;
+      g.appendChild(el('line', { x1: x + 8, y1: ly, x2: x + w - 22, y2: ly,
+        stroke: n.gray ? '#c9c9c9' : '#9fc2dd', 'stroke-width': 0.8 }));
+    }
+  }
+  if (n.store) { // data store: double bottom border
+    g.appendChild(el('line', { x1: x, y1: y + h - 4, x2: x + w, y2: y + h - 4,
+      stroke: n.gray ? '#aaaaaa' : '#7aaecc', 'stroke-width': 1.2 }));
+  }
+  // port indicator
+  g.appendChild(el('rect', { x: x + w - 15, y: y + h / 2 - 4, width: 8, height: 8,
+    fill: '#fff', stroke: n.gray ? '#aaa' : '#7aaecc', 'stroke-width': 1 }));
+  g.appendChild(txt(n.cx, y + h + 15, n.label, { bold: true, size: 11.5 }));
+  g.appendChild(txt(n.cx, y + h + 28, n.tech, { mono: true, size: 9, fill: '#666' }));
+  g.addEventListener('click', e => { e.stopPropagation(); openPanel(key); });
+  tvp.appendChild(g);
+}
+
+const EDGES = [
+  { d: 'M380 138 V 215 H 220 V 290', bidi: true, label: ['HTTP :5173', 'GET — HTML · JS · CSS (dev)'], lx: 285, ly: 198,
+    tip: { t: 'Browser ⇄ Vite Dev Server', d: 'HTTP, port 5173, loopback. Vite serves index.html + module graph with HMR. Dev only — prod uses the built dist/ on a static host.' } },
+  { d: 'M460 138 V 215 H 760 V 290', bidi: true, dashed: true, gray: true, label: ['HTTPS :443 — dist/ (prod)', '[inferred: description.md §3]'], lx: 620, ly: 198,
+    tip: { t: 'Browser ⇄ Static Host (inferred)', d: 'HTTPS :80/:443. nginx serves frontend/dist with try_files $uri /index.html. Evidence: description.md §3; no hosting config in repo.' } },
+  { d: 'M420 138 V 450 H 340 V 480', bidi: true, label: ['HTTP :8000 · JSON', 'POST /api/bot-move', 'GET /api/levels'], lx: 420, ly: 320, vert: true,
+    tip: { t: 'Browser ⇄ FastAPI', d: 'HTTP :8000, JSON. Request {current_fen, level}; response {bot_move, bot_move_san, new_fen, is_check, is_checkmate, is_draw, game_over, eval_cp, depth, nodes, time_ms}. API_URL hardcoded in App.jsx:154; CORS locked to localhost:5173/3000.' } },
+  { d: 'M980 138 V 415 H 360 V 480', bidi: true, dashed: true, gray: true, label: ['HTTP :8000 (curl) [inferred]'], lx: 800, ly: 415,
+    tip: { t: 'Direct API Client ⇄ FastAPI (inferred)', d: 'Same JSON API via curl, used for sanity checks per description.md / CLAUDE.md. Not subject to CORS.' } },
+  { d: 'M280 308 H 700', dashed: true, gray: true, label: ['npm run build → dist/ (build-time)'], lx: 490, ly: 295,
+    tip: { t: 'Vite → Static Host (build-time)', d: 'vite build emits static files to frontend/dist/, which the prod host serves. Not a runtime link.' } },
+  { d: 'M220 326 V 498 H 280', dashed: true, gray: true, label: ['dev proxy /api → :8000', '(configured, unused)'], lx: 220, ly: 412, vert: true,
+    tip: { t: 'Vite proxy → FastAPI (unused)', d: "vite.config.js proxies '/api' to http://localhost:8000, but App.jsx fetches the absolute URL directly, so the proxy never fires." } },
+  { d: 'M400 499 H 560', bidi: true, label: ['in-process', 'engine.search(fen, level)'], lx: 480, ly: 478,
+    tip: { t: 'FastAPI ⇄ ChessEngine', d: 'Plain Python call, same process/thread. main.py:93 → ai_engine.ChessEngine.search() → SearchResult(move, score_cp, depth, nodes, time_ms). Move re-validated against board.legal_moves on return.' } },
+  { d: 'M590 518 V 620 H 180 V 680', label: ['probe/store — _transposition_key()'], lx: 390, ly: 607,
+    tip: { t: 'ChessEngine → Transposition Table', d: 'Read/write on every _negamax node. Entries: (depth, flag exact/lower/upper, score, best_move). Rebuilt per search; uses the incremental key, not polyglot zobrist (measured bottleneck).' } },
+  { d: 'M620 518 V 645 H 430 V 680', label: ['FEN-prefix lookup'], lx: 528, ly: 632,
+    tip: { t: 'ChessEngine → Opening Book', d: 'Key = piece placement + side to move (clocks/castling/ep ignored). On hit: random.choice(legal book replies), search skipped entirely.' } },
+  { d: 'M650 518 V 680', label: ['preset read', '(time/depth/temp/blunder)'], lx: 650, ly: 597, vert: true,
+    tip: { t: 'ChessEngine → LEVELS', d: 'search() reads the Level dataclass for the requested key: time budget, max depth, softmax temperature, blunder probability. Unknown keys fall back to DEFAULT_LEVEL "hard".' } },
+  { d: 'M920 518 V 680', gray: true, label: ['torch.save() → *.pth (offline)'], lx: 920, ly: 597, vert: true,
+    tip: { t: 'Legacy Trainers → Model Artifacts', d: 'train_model.py / train_ai_fast.py write chess_model.pth / chess_model_fast.pth. One-way, offline; nothing reads these at runtime.' } },
+];
+
+function topoEdge(e) {
+  const color = e.gray ? '#888' : '#444';
+  const marker = e.gray ? 'tArrD' : 'tArr';
+  const p = el('path', { d: e.d, fill: 'none', stroke: color, 'stroke-width': 1.5,
+    'marker-end': 'url(#' + marker + ')', 'stroke-dasharray': e.dashed ? '6,4' : 'none' });
+  if (e.bidi) p.setAttribute('marker-start', 'url(#' + marker + ')');
+  tvp.appendChild(p);
+  // invisible fat hit path for click → tooltip
+  const hit = el('path', { d: e.d, fill: 'none', stroke: 'rgba(0,0,0,0)', 'stroke-width': 14, class: 'edgeHit', style: 'cursor:pointer' });
+  hit.addEventListener('click', ev => {
+    ev.stopPropagation();
+    const tip = document.getElementById('edgeTip');
+    tip.innerHTML = '<div class="t">' + e.tip.t + '</div><div class="d">' + e.tip.d + '</div>';
+    tip.style.display = 'block';
+    tip.style.left = Math.min(window.innerWidth - 320, ev.clientX + 12) + 'px';
+    tip.style.top = (ev.clientY + 12) + 'px';
+  });
+  tvp.appendChild(hit);
+  if (e.label) {
+    const lines = Array.isArray(e.label) ? e.label : [e.label];
+    const g = el('g', {});
+    const fh = 12.5;
+    const by = e.ly - (lines.length * fh) / 2;
+    lines.forEach((s, i) => g.appendChild(txt(e.lx, by + 10 + i * fh, s, { mono: true, size: 9, fill: '#555' })));
+    if (e.vert) g.setAttribute('transform', 'rotate(-90 ' + e.lx + ' ' + e.ly + ')');
+    tvp.appendChild(g);
+  }
+}
+
+EDGES.forEach(topoEdge);
+Object.keys(NODES).forEach(topoNode);
+
+// side panel
+function openPanel(key) {
+  const n = NODES[key], d = n.detail;
+  document.getElementById('pName').textContent = n.label;
+  document.getElementById('pTech').textContent = d.tech;
+  fill('pFiles', d.files); fill('pCfg', d.cfg); fill('pEnv', d.env);
+  fill('pIn', d.inb); fill('pOut', d.out);
+  document.getElementById('panel').classList.add('open');
+}
+function fill(id, arr) {
+  const e = document.getElementById(id);
+  if (!arr || !arr.length) { e.innerHTML = '<span class="none">none</span>'; return; }
+  e.innerHTML = '<ul>' + arr.map(s => '<li>' + s.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</li>').join('') + '</ul>';
+}
+document.getElementById('panelClose').addEventListener('click', () => document.getElementById('panel').classList.remove('open'));
+document.addEventListener('click', e => {
+  if (!e.target.closest('#edgeTip')) document.getElementById('edgeTip').style.display = 'none';
+});
+
+const topoPZ = panzoom(tsvg, tvp, 1100, 970, 1, 0, 0);
+document.getElementById('resetTopo').addEventListener('click', topoPZ.reset);
+document.getElementById('exportSvg').addEventListener('click', () => {
+  const clone = tsvg.cloneNode(true);
+  clone.setAttribute('xmlns', NS);
+  const blob = new Blob([clone.outerHTML], { type: 'image/svg+xml' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'chess-ai-bot-system-design.svg';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+/* =========================================================================
+   PART 2 — APPLICATION FLOWS
+========================================================================= */
+// shape renderer ------------------------------------------------------------
+function flowNode(vp, n) {
+  const g = el('g', { class: 'node' });
+  const w = n.w || 190, h = n.h || 48;
+  const x = n.x - w / 2, y = n.y;
+  if (n.type === 'start' || n.type === 'end') {
+    g.appendChild(el('rect', { x, y, width: w, height: 34, rx: 17, ry: 17, fill: '#2a6099' }));
+    g.appendChild(txt(n.x, y + 21, n.label, { fill: '#fff', size: 11, bold: true, noHalo: true }));
+  } else if (n.type === 'dec') {
+    const cy = y + h / 2;
+    g.appendChild(el('polygon', {
+      points: (n.x) + ',' + y + ' ' + (x + w) + ',' + cy + ' ' + n.x + ',' + (y + h) + ' ' + x + ',' + cy,
+      fill: '#ffffff', stroke: '#7aaecc', 'stroke-width': 1.2 }));
+    wrap(g, n.x, cy, n.label, 10, '#333', w - 46);
+  } else if (n.type === 'err') {
+    g.appendChild(el('rect', { x, y, width: w, height: h, rx: 4, fill: '#8b1a1a' }));
+    wrap(g, n.x, y + (n.sub ? h / 2 - 5 : h / 2), n.label, 10.5, '#fff', w - 16, true);
+    if (n.sub) g.appendChild(txt(n.x, y + h - 9, n.sub, { mono: true, size: 8.5, fill: '#e8c8c8', noHalo: true }));
+  } else if (n.type === 'data') {
+    const sk = 14;
+    g.appendChild(el('polygon', {
+      points: (x + sk) + ',' + y + ' ' + (x + w) + ',' + y + ' ' + (x + w - sk) + ',' + (y + h) + ' ' + x + ',' + (y + h),
+      fill: '#eef3f8', stroke: '#7aaecc', 'stroke-width': 1.2 }));
+    wrap(g, n.x, y + (n.sub ? h / 2 - 4 : h / 2 + 1), n.label, 10, '#333', w - 34);
+    if (n.sub) g.appendChild(txt(n.x, y + h - 9, n.sub, { mono: true, size: 8.5, fill: '#666', noHalo: true }));
+  } else { // proc / ext / cross
+    g.appendChild(el('rect', { x, y, width: w, height: h, rx: 4,
+      fill: n.type === 'cross' ? '#f1f4f6' : '#cde4f5',
+      stroke: '#7aaecc', 'stroke-width': 1.2,
+      'stroke-dasharray': n.type === 'ext' ? '5,3' : 'none' }));
+    wrap(g, n.x, y + (n.sub ? h / 2 - 4 : h / 2 + 1), n.label, 10.5, '#333', w - 16, true);
+    if (n.sub) g.appendChild(txt(n.x, y + h - 9, n.sub, { mono: true, size: 8.5, fill: '#555', noHalo: true }));
+  }
+  vp.appendChild(g);
+}
+// crude word-wrap into up to 2 centered lines
+function wrap(g, cx, cy, str, size, fill, maxW, bold) {
+  const charW = size * 0.56;
+  const maxChars = Math.max(8, Math.floor(maxW / charW));
+  let lines = [str];
+  if (str.length > maxChars) {
+    let cut = str.lastIndexOf(' ', maxChars);
+    if (cut < maxChars * 0.5) cut = maxChars;
+    lines = [str.slice(0, cut).trim(), str.slice(cut).trim()];
+  }
+  const lh = size + 2.5;
+  const y0 = cy - ((lines.length - 1) * lh) / 2 + size * 0.35;
+  lines.forEach((s, i) => g.appendChild(txt(cx, y0 + i * lh, s, { size, fill, bold: !!bold, noHalo: fill === '#fff' })));
+}
+function flowEdge(vp, e) {
+  const color = e.kind === 'err' ? '#8b1a1a' : (e.kind === 'data' ? '#666' : '#444');
+  const marker = e.kind === 'err' ? 'fArrE' : (e.kind === 'data' ? 'fArrD' : 'fArr');
+  vp.appendChild(el('path', { d: e.d, fill: 'none', stroke: color, 'stroke-width': 1.5,
+    'marker-end': 'url(#' + marker + ')', 'stroke-dasharray': e.kind === 'data' ? '5,4' : 'none' }));
+  if (e.label) {
+    const g = el('g', {});
+    g.appendChild(txt(e.lx, e.ly, e.label, { mono: true, size: 9, fill: color === '#444' ? '#555' : color }));
+    if (e.vert) g.setAttribute('transform', 'rotate(-90 ' + e.lx + ' ' + e.ly + ')');
+    vp.appendChild(g);
+  }
+}
+
+// flow definitions ----------------------------------------------------------
+const FLOWS = [
+
+// ---- FLOW 1 ---------------------------------------------------------------
+{ id: 'f1', name: 'Player Move & Validation', vw: 860, vh: 950,
+  caption: 'Client-side move path. chess.js is the local rules authority; the backend is only contacted after a legal move is committed. Cross-cutting concerns (left column) attach via dashed data links.',
+  nodes: [
+    { type: 'start', x: 430, y: 20,  label: 'Player input — drag or click' },
+    { type: 'proc',  x: 430, y: 95,  label: 'onPieceDrop / onSquareClick', sub: 'frontend/src/App.jsx:487 · :456' },
+    { type: 'proc',  x: 430, y: 185, label: 'tryMove(from, to)', sub: 'frontend/src/App.jsx:415' },
+    { type: 'dec',   x: 430, y: 275, w: 230, h: 76, label: 'guards pass? (not setup · not thinking · not game over · player’s turn)' },
+    { type: 'end',   x: 730, y: 296, w: 170, label: 'ignored — return false' },
+    { type: 'proc',  x: 430, y: 400, label: "gameRef.move({from, to, promotion:'q'})", sub: 'chess.js — local legality check' },
+    { type: 'dec',   x: 430, y: 490, w: 190, h: 60, label: 'move === null ?' },
+    { type: 'end',   x: 730, y: 503, w: 180, label: 'rejected — board unchanged' },
+    { type: 'proc',  x: 430, y: 600, label: 'commit: setGame, move history, notification', sub: 'App.jsx:431–437' },
+    { type: 'proc',  x: 430, y: 690, label: 'play sound — capture / check / move', sub: 'App.jsx:439–445' },
+    { type: 'data',  x: 430, y: 780, label: 'FEN string', sub: 'newGame.fen()' },
+    { type: 'proc',  x: 430, y: 865, label: 'setTimeout(350 ms) → makeBotMove(fen)', sub: 'App.jsx:450' },
+    { type: 'cross', x: 120, y: 690, w: 160, label: 'SoundController', sub: 'Web Audio API — App.jsx:6' },
+    { type: 'cross', x: 120, y: 600, w: 160, label: 'chess clock interval', sub: 'useEffect — App.jsx:275' },
+  ],
+  edges: [
+    { d: 'M430 54 V 95' }, { d: 'M430 143 V 185' }, { d: 'M430 233 V 275' },
+    { d: 'M545 313 H 645', label: 'false', lx: 595, ly: 303 },
+    { d: 'M430 351 V 400', label: 'true', lx: 448, ly: 378 },
+    { d: 'M430 448 V 490' },
+    { d: 'M525 520 H 640', label: 'true (illegal)', lx: 580, ly: 510, kind: 'err' },
+    { d: 'M430 550 V 600', label: 'false (legal)', lx: 478, ly: 578 },
+    { d: 'M430 648 V 690' }, { d: 'M430 738 V 780' }, { d: 'M430 828 V 865' },
+    { d: 'M200 714 H 335', kind: 'data', label: 'oscillator synth', lx: 268, ly: 704 },
+    { d: 'M200 624 H 335', kind: 'data', label: 'ticks while turn active', lx: 268, ly: 614 },
+  ],
+  next: 'continues in Flow 2 — the FEN is POSTed to the backend',
+  steps: [
+    ['1', 'onPieceDrop / onSquareClick', 'frontend/src/App.jsx:487 / :456', 'Input adapters — both delegate to the shared executor'],
+    ['2', 'tryMove(from, to)', 'frontend/src/App.jsx:415', 'Shared move executor for drag-and-drop and click-to-move'],
+    ['3', 'guard checks', 'frontend/src/App.jsx:417–421', 'Rejects input during setup, AI thinking, finished game, or off-turn'],
+    ['4', 'gameRef.move(…)', 'chess.js (^1.0.0-beta.8)', 'Local rules authority; returns null for illegal moves (auto-queen promotion)'],
+    ['5', 'commit state', 'frontend/src/App.jsx:431–437', 'New Chess instance from FEN; history + notification updates'],
+    ['6', 'play sound', 'frontend/src/App.jsx:439–445', 'Capture/check/move sounds synthesized by SoundController'],
+    ['7', 'setTimeout → makeBotMove', 'frontend/src/App.jsx:450', 'Hands the new FEN to the bot request flow after 350 ms'],
+  ] },
+
+// ---- FLOW 2 ---------------------------------------------------------------
+{ id: 'f2', name: 'Bot Move Round Trip', vw: 980, vh: 1060,
+  caption: 'The primary data write path: one stateless POST per bot move. The FEN is the entire game state — the server holds nothing between requests. Error forks (right, dark red) re-join the frontend catch handler.',
+  nodes: [
+    { type: 'start', x: 350, y: 20,  label: 'makeBotMove(fen)' },
+    { type: 'proc',  x: 350, y: 90,  label: 'setIsThinking(true)', sub: 'App.jsx:337' },
+    { type: 'data',  x: 350, y: 175, label: 'JSON {current_fen, level}', sub: 'level ← difficultyRef (stale-closure guard)' },
+    { type: 'ext',   x: 350, y: 260, w: 230, label: 'fetch POST http://localhost:8000 /api/bot-move', sub: 'HTTP :8000 — App.jsx:339' },
+    { type: 'proc',  x: 350, y: 350, label: 'get_bot_move(request)', sub: 'backend/main.py:75' },
+    { type: 'dec',   x: 350, y: 440, w: 220, h: 70, label: 'FEN valid · game not over · moves exist?' },
+    { type: 'err',   x: 745, y: 452, w: 210, label: 'HTTP 400 — invalid FEN / game over', sub: 'main.py:81 · :84 · :88' },
+    { type: 'proc',  x: 350, y: 560, label: 'result = engine.search(fen, level)', sub: 'main.py:93 → ai_engine.py:582 (Flow 3)' },
+    { type: 'dec',   x: 350, y: 650, w: 220, h: 64, label: 'move returned & in legal_moves?' },
+    { type: 'err',   x: 745, y: 660, w: 210, label: 'HTTP 500 — AI failed / illegal move', sub: 'main.py:99 · :104 · :108' },
+    { type: 'proc',  x: 350, y: 765, label: 'san = board.san(move); board.push(move)', sub: 'main.py:111–112 — SAN before push' },
+    { type: 'data',  x: 350, y: 855, w: 250, label: 'BotMoveResponse', sub: 'bot_move·san·new_fen·eval_cp·depth·nodes·time_ms' },
+    { type: 'proc',  x: 350, y: 945, w: 240, label: 'apply new_fen: history, eval bar, status, sounds', sub: 'App.jsx:357–400' },
+    { type: 'end',   x: 350, y: 1020, label: 'player’s turn' },
+    { type: 'proc',  x: 745, y: 800, w: 210, label: 'catch: parse detail → addNotification', sub: 'App.jsx:345–355 · :402–406' },
+    { type: 'err',   x: 745, y: 905, w: 210, label: 'error toast — isThinking=false, board unchanged' },
+  ],
+  edges: [
+    { d: 'M350 54 V 90' }, { d: 'M350 138 V 175' }, { d: 'M350 223 V 260' }, { d: 'M350 308 V 350' },
+    { d: 'M350 398 V 440' },
+    { d: 'M460 475 H 640', kind: 'err', label: 'no', lx: 545, ly: 465 },
+    { d: 'M350 510 V 560', label: 'yes', lx: 368, ly: 538 },
+    { d: 'M350 608 V 650' },
+    { d: 'M460 682 H 640', kind: 'err', label: 'no', lx: 545, ly: 672 },
+    { d: 'M350 714 V 765', label: 'yes', lx: 368, ly: 742 },
+    { d: 'M350 813 V 855' }, { d: 'M350 903 V 945' }, { d: 'M350 1000 V 1020' },
+    { d: 'M745 500 V 540 H 920 V 824 H 850', kind: 'err', label: 'JSON {detail}', lx: 920, ly: 680, vert: true },
+    { d: 'M745 708 V 800', kind: 'err' },
+    { d: 'M745 848 V 905', kind: 'err' },
+  ],
+  next: null,
+  steps: [
+    ['1', 'makeBotMove(fen)', 'frontend/src/App.jsx:336', 'Builds the request; difficultyRef avoids a stale closure on level'],
+    ['2', 'fetch POST /api/bot-move', 'frontend/src/App.jsx:339–343', 'Only network call in the app (besides asset loading)'],
+    ['3', 'get_bot_move(request)', 'backend/main.py:75', 'Validates FEN, game-over state, and legal-move availability (400s)'],
+    ['4', 'engine.search(fen, level)', 'backend/ai_engine.py:582', 'Computes the bot move — detailed in Flow 3'],
+    ['5', 'legality re-check', 'backend/main.py:102–108', 'Defensive: UCI parse + membership in board.legal_moves (500s)'],
+    ['6', 'SAN then push', 'backend/main.py:111–112', 'SAN must be computed before the move is applied'],
+    ['7', 'BotMoveResponse', 'backend/main.py:116–133', 'New FEN + flags + eval_cp (mover’s perspective) + search stats'],
+    ['8', 'frontend applies state', 'frontend/src/App.jsx:357–400', 'Rebuilds Chess from new_fen; converts eval to White’s perspective; sounds'],
+  ] },
+
+// ---- FLOW 3 ---------------------------------------------------------------
+{ id: 'f3', name: 'Engine Search', vw: 1000, vh: 1290,
+  caption: 'Inside ChessEngine.search() — three early exits (book, blunder, forced move) before the iterative-deepening alpha-beta search. The left return edge is the deepening loop. Sampled (weakened) levels need exact root scores, so root window-narrowing is skipped when temperature > 0.',
+  nodes: [
+    { type: 'start', x: 370, y: 20,  label: 'engine.search(fen, level)' },
+    { type: 'dec',   x: 370, y: 90,  w: 220, h: 64, label: 'FEN parses · game not over?' },
+    { type: 'err',   x: 760, y: 100, w: 200, label: 'SearchResult(None) → API 500', sub: 'ai_engine.py:586–593' },
+    { type: 'dec',   x: 370, y: 195, w: 220, h: 64, label: 'position in OPENING_BOOK?' },
+    { type: 'proc',  x: 760, y: 205, w: 200, label: 'random.choice(legal book replies)', sub: 'ai_engine.py:600–606' },
+    { type: 'dec',   x: 370, y: 300, w: 220, h: 64, label: 'random() < blunder(level)?' },
+    { type: 'proc',  x: 760, y: 310, w: 200, label: 'random legal move (deliberate blunder)', sub: 'ai_engine.py:609–611' },
+    { type: 'dec',   x: 370, y: 405, w: 220, h: 64, label: 'exactly one legal move?' },
+    { type: 'proc',  x: 760, y: 415, w: 200, label: 'play the forced move', sub: 'ai_engine.py:613–615' },
+    { type: 'proc',  x: 370, y: 510, w: 250, label: 'reset TT · killers · history; deadline = start + time_limit', sub: 'ai_engine.py:617–623' },
+    { type: 'proc',  x: 370, y: 600, w: 250, label: 'iterative deepening: depth = 1 … max_depth', sub: 'ai_engine.py:637' },
+    { type: 'proc',  x: 370, y: 690, w: 250, label: 'root loop: score = −_negamax(d−1) per move', sub: 'exact root scores if temperature > 0 — :648–660' },
+    { type: 'proc',  x: 370, y: 780, w: 250, label: '_negamax: TT probe · null-move · LMR · check ext · killers/history', sub: 'ai_engine.py:454–561' },
+    { type: 'proc',  x: 370, y: 870, w: 250, label: '_quiescence at depth ≤ 0 — captures, promotions, check evasions', sub: 'ai_engine.py:407–450 (own time check)' },
+    { type: 'dec',   x: 370, y: 960, w: 250, h: 76, label: 'stop? (mate found · elapsed > 45% budget · deadline hit)' },
+    { type: 'dec',   x: 370, y: 1090, w: 220, h: 64, label: 'temperature > 0 ?' },
+    { type: 'proc',  x: 760, y: 1100, w: 210, label: '_sample_move — Boltzmann softmax over root scores', sub: 'ai_engine.py:686–701' },
+    { type: 'data',  x: 370, y: 1195, w: 260, label: 'SearchResult', sub: '{move, score_cp, depth, nodes, time_ms}' },
+    { type: 'end',   x: 760, y: 1199, w: 180, label: 'return to main.py' },
+  ],
+  edges: [
+    { d: 'M370 54 V 90' },
+    { d: 'M480 122 H 660', kind: 'err', label: 'no', lx: 565, ly: 112 },
+    { d: 'M370 154 V 195', label: 'yes', lx: 388, ly: 178 },
+    { d: 'M480 227 H 660', label: 'hit', lx: 565, ly: 217 },
+    { d: 'M370 259 V 300', label: 'miss', lx: 392, ly: 283 },
+    { d: 'M480 332 H 660', label: 'yes', lx: 565, ly: 322 },
+    { d: 'M370 364 V 405', label: 'no', lx: 388, ly: 388 },
+    { d: 'M480 437 H 660', label: 'yes', lx: 565, ly: 427 },
+    { d: 'M370 469 V 510', label: 'no', lx: 388, ly: 492 },
+    { d: 'M370 558 V 600' }, { d: 'M370 648 V 690' }, { d: 'M370 738 V 780' }, { d: 'M370 828 V 870' },
+    { d: 'M370 918 V 960' },
+    { d: 'M245 998 H 130 V 624 H 245', label: 'no — next depth', lx: 130, ly: 810, vert: true },
+    { d: 'M370 1036 V 1090', label: 'yes', lx: 388, ly: 1066 },
+    { d: 'M480 1122 H 655', label: 'yes — weaken', lx: 567, ly: 1112 },
+    { d: 'M370 1154 V 1195', label: 'no — best move', lx: 425, ly: 1177 },
+    { d: 'M760 1148 V 1170 H 480 V 1195', kind: 'data', label: 'sampled move', lx: 620, ly: 1160 },
+    { d: 'M500 1212 H 670', kind: 'data' },
+    { d: 'M860 227 V 270 H 940 V 1212 H 850', kind: 'data', label: 'early return (book / blunder / forced)', lx: 940, ly: 720, vert: true },
+    { d: 'M860 332 H 940', kind: 'data' },
+    { d: 'M860 437 H 940', kind: 'data' },
+  ],
+  next: null,
+  steps: [
+    ['1', 'search(fen, level)', 'backend/ai_engine.py:582', 'Root entry; resolves the Level preset (falls back to "hard")'],
+    ['2', 'OPENING_BOOK lookup', 'backend/ai_engine.py:600–606', 'Key = piece placement + turn; random choice among legal book replies'],
+    ['3', 'blunder roll', 'backend/ai_engine.py:609–611', 'beginner 20% / easy 6% chance of a random legal move'],
+    ['4', 'state reset', 'backend/ai_engine.py:617–623', 'Fresh TT/killers/history; soft deadline = start + time_limit'],
+    ['5', 'iterative deepening', 'backend/ai_engine.py:637–676', 'Depth 1…max_depth; predictive cutoff at 45% of time budget'],
+    ['6', '_negamax', 'backend/ai_engine.py:454–561', 'Alpha-beta + TT + null-move (R=3) + LMR (quiet, i≥4) + check extension'],
+    ['7', '_quiescence', 'backend/ai_engine.py:407–450', 'Captures/promotions (and check evasions) past the horizon; own time check'],
+    ['8', '_sample_move', 'backend/ai_engine.py:686–701', 'Boltzmann softmax over root scores when temperature > 0 (weak levels)'],
+    ['9', 'SearchResult', 'backend/ai_engine.py:684', 'UCI move + score (side-to-move) + depth/nodes/time stats'],
+  ] },
+
+// ---- FLOW 4 ---------------------------------------------------------------
+{ id: 'f4', name: 'Error Handling & Recovery', vw: 1090, vh: 900,
+  caption: 'Every failure converges on the same frontend catch: a toast notification, isThinking reset, and an unchanged board — the player can simply move again. The clock flameout (bottom lane) is the only error that ends the game.',
+  nodes: [
+    { type: 'start', x: 290, y: 20, w: 230, label: 'POST /api/bot-move received' },
+    { type: 'dec',  x: 290, y: 95,  w: 230, h: 64, label: 'chess.Board(fen) raises ValueError?' },
+    { type: 'err',  x: 640, y: 105, w: 190, label: 'HTTP 400 — Invalid FEN notation', sub: 'main.py:79–81' },
+    { type: 'dec',  x: 290, y: 205, w: 230, h: 64, label: 'board.is_game_over()?' },
+    { type: 'err',  x: 640, y: 215, w: 190, label: 'HTTP 400 — Game is already over', sub: 'main.py:83–84' },
+    { type: 'dec',  x: 290, y: 315, w: 230, h: 64, label: 'engine.search(...) raises?' },
+    { type: 'err',  x: 640, y: 325, w: 190, label: 'HTTP 500 — AI engine error', sub: 'main.py:94–96 logger.exception' },
+    { type: 'dec',  x: 290, y: 425, w: 230, h: 70, label: 'move is None / bad UCI / not in legal_moves?' },
+    { type: 'err',  x: 640, y: 437, w: 190, label: 'HTTP 500 — AI generated illegal move', sub: 'main.py:98–108' },
+    { type: 'end',  x: 290, y: 545, w: 220, label: '200 OK — normal response (Flow 2)' },
+    { type: 'ext',  x: 640, y: 545, w: 200, label: 'network failure — fetch rejects', sub: 'backend down / CORS block' },
+    { type: 'proc', x: 950, y: 280, w: 210, label: '!response.ok → parse {detail} → throw Error', sub: 'App.jsx:345–355' },
+    { type: 'proc', x: 950, y: 390, w: 210, label: "catch: addNotification('Error: …') · setIsThinking(false)", sub: 'App.jsx:402–406' },
+    { type: 'err',  x: 950, y: 500, w: 210, label: 'toast shown — board unchanged' },
+    { type: 'end',  x: 950, y: 590, w: 220, label: 'recovered — player may retry' },
+    { type: 'proc', x: 290, y: 720, w: 230, label: 'clock interval: whiteTime / blackTime reaches 0', sub: 'App.jsx:284–311' },
+    { type: 'err',  x: 640, y: 723, w: 200, label: '“Time!” — isCheckmate=true + game-over sound', sub: 'App.jsx:288–291 · :301–304' },
+    { type: 'end',  x: 950, y: 727, w: 180, label: 'game over by time' },
+  ],
+  edges: [
+    { d: 'M290 54 V 95' },
+    { d: 'M405 127 H 545', kind: 'err', label: 'yes', lx: 478, ly: 117 },
+    { d: 'M290 159 V 205', label: 'no', lx: 306, ly: 184 },
+    { d: 'M405 237 H 545', kind: 'err', label: 'yes', lx: 478, ly: 227 },
+    { d: 'M290 269 V 315', label: 'no', lx: 306, ly: 294 },
+    { d: 'M405 347 H 545', kind: 'err', label: 'yes', lx: 478, ly: 337 },
+    { d: 'M290 379 V 425', label: 'no', lx: 306, ly: 404 },
+    { d: 'M405 460 H 545', kind: 'err', label: 'yes', lx: 478, ly: 450 },
+    { d: 'M290 495 V 545', label: 'no', lx: 306, ly: 522 },
+    { d: 'M735 461 H 800 V 304 H 845', kind: 'err', label: 'JSON {detail}', lx: 800, ly: 380, vert: true },
+    { d: 'M735 129 H 800', kind: 'err' },
+    { d: 'M735 239 H 800', kind: 'err' },
+    { d: 'M735 349 H 800', kind: 'err' },
+    { d: 'M735 569 H 800', kind: 'err', label: 'TypeError', lx: 768, ly: 559 },
+    { d: 'M950 328 V 390', kind: 'err' },
+    { d: 'M950 438 V 500', kind: 'err' },
+    { d: 'M950 548 V 590', kind: 'err' },
+    { d: 'M290 579 V 720', kind: 'data', label: 'meanwhile, every second…', lx: 290, ly: 650, vert: true },
+    { d: 'M405 744 H 540', kind: 'err' },
+    { d: 'M740 747 H 860', kind: 'err' },
+  ],
+  next: null,
+  steps: [
+    ['1', 'FEN validation', 'backend/main.py:77–81', 'chess.Board(fen) ValueError → HTTP 400 with detail'],
+    ['2', 'game-over / legal-move guard', 'backend/main.py:83–88', 'Finished positions and stalemates → HTTP 400'],
+    ['3', 'engine exception guard', 'backend/main.py:92–96', 'Any search() exception logged (logger.exception) → HTTP 500'],
+    ['4', 'illegal-move guard', 'backend/main.py:98–108', 'None / unparsable / illegal UCI from engine → HTTP 500'],
+    ['5', 'response.ok check', 'frontend/src/App.jsx:345–355', 'Parses {detail}; falls back to "Server error: <status>"'],
+    ['6', 'catch handler', 'frontend/src/App.jsx:402–406', 'Toast notification + setIsThinking(false); board state untouched'],
+    ['7', 'clock flameout', 'frontend/src/App.jsx:284–311', 'Time hitting 0 sets isCheckmate, plays game-over sound — ends the game'],
+  ] },
+
+// ---- FLOW 5 ---------------------------------------------------------------
+{ id: 'f5', name: 'Startup & Initialization', vw: 1040, vh: 760,
+  caption: 'Two independent launch sequences. The backend imports no torch — module import is instant and the engine singleton is ready before the first request. The columns first touch when the player starts a game as Black (or makes their first move as White).',
+  nodes: [
+    { type: 'start', x: 270, y: 20,  w: 230, label: 'uvicorn main:app  (:8000)' },
+    { type: 'proc',  x: 270, y: 95,  w: 230, label: 'import main.py — FastAPI app, routes', sub: 'GET / · GET /api/levels · POST /api/bot-move' },
+    { type: 'proc',  x: 270, y: 185, w: 230, label: 'import ai_engine — pure Python, no torch', sub: 'torch import (>60 s here) deliberately removed' },
+    { type: 'proc',  x: 270, y: 275, w: 230, label: 'module init: PASSED_MASK precompute · engine = ChessEngine()', sub: 'ai_engine.py:201 · :708' },
+    { type: 'proc',  x: 270, y: 365, w: 230, label: 'CORS middleware — localhost allowlist', sub: 'main.py:26–35' },
+    { type: 'end',   x: 270, y: 455, w: 220, label: 'API listening on :8000' },
+    { type: 'start', x: 770, y: 20,  w: 230, label: 'npm run dev  (Vite :5173)' },
+    { type: 'proc',  x: 770, y: 95,  w: 230, label: 'index.html loads /src/main.jsx', sub: 'module script' },
+    { type: 'proc',  x: 770, y: 185, w: 230, label: 'ReactDOM.createRoot(#root).render(<App/>)', sub: 'frontend/src/main.jsx:6' },
+    { type: 'proc',  x: 770, y: 275, w: 230, label: 'setup screen — color · difficulty · time control', sub: 'gameSetup=true — App.jsx:512' },
+    { type: 'proc',  x: 770, y: 365, w: 230, label: 'startGame(): new Chess() · clocks set · first sound', sub: 'App.jsx:248–272' },
+    { type: 'dec',   x: 770, y: 455, w: 210, h: 64, label: "playerColor === 'b' ?" },
+    { type: 'proc',  x: 770, y: 565, w: 230, label: 'setTimeout(500 ms) → makeBotMove(start FEN)', sub: 'App.jsx:269–271 — bot (White) opens' },
+    { type: 'end',   x: 770, y: 660, w: 230, label: 'game ready — Flow 1 / Flow 2' },
+    { type: 'end',   x: 440, y: 471, w: 220, label: 'game ready — player (White) moves' },
+  ],
+  edges: [
+    { d: 'M270 54 V 95' }, { d: 'M270 143 V 185' }, { d: 'M270 233 V 275' }, { d: 'M270 323 V 365' }, { d: 'M270 413 V 455' },
+    { d: 'M770 54 V 95' }, { d: 'M770 143 V 185' }, { d: 'M770 233 V 275' }, { d: 'M770 323 V 365' }, { d: 'M770 413 V 455' },
+    { d: 'M665 487 H 550', label: 'no', lx: 607, ly: 477 },
+    { d: 'M770 519 V 565', label: 'yes', lx: 788, ly: 545 },
+    { d: 'M770 613 V 660' },
+    { d: 'M655 589 H 565 V 445 H 385 V 472 H 380', kind: 'data', label: 'first request — POST /api/bot-move (Flow 2)', lx: 475, ly: 433 },
+  ],
+  next: null,
+  steps: [
+    ['1', 'uvicorn main:app', 'backend/main.py:141–143 / CLI', 'ASGI server boots; dev uses --reload on :8000'],
+    ['2', 'import ai_engine', 'backend/main.py:16', 'Pure-Python import — instant startup, no model files loaded'],
+    ['3', 'module singletons', 'backend/ai_engine.py:201, 708', 'PASSED_MASK bitboards precomputed; engine = ChessEngine()'],
+    ['4', 'CORS middleware', 'backend/main.py:26–35', 'Allowlist: localhost/127.0.0.1 on :5173 and :3000'],
+    ['5', 'Vite serves SPA', 'frontend/vite.config.js', 'Dev server :5173; index.html → main.jsx module graph'],
+    ['6', 'React bootstrap', 'frontend/src/main.jsx:6–10', 'createRoot(#root).render(<App/>) in StrictMode'],
+    ['7', 'startGame()', 'frontend/src/App.jsx:248–272', 'Fresh Chess(), clocks from TIME_CONTROLS, setup screen dismissed'],
+    ['8', 'bot opens (if Black)', 'frontend/src/App.jsx:269–271', 'Player as Black → bot (White) requests its first move after 500 ms'],
+  ] },
+];
+
+// flow UI -------------------------------------------------------------------
+const tabsBox = document.getElementById('flowTabs');
+const mount = document.getElementById('flowMount');
+let activeFlow = null;
+
+FLOWS.forEach((f, i) => {
+  const b = document.createElement('button');
+  b.innerHTML = '<span class="t">' + f.name + '</span><span class="c">' + f.steps.length + ' steps</span>';
+  b.addEventListener('click', () => showFlow(i));
+  tabsBox.appendChild(b);
+});
+
+function showFlow(i) {
+  const f = FLOWS[i];
+  activeFlow = i;
+  Array.from(tabsBox.children).forEach((b, j) => b.classList.toggle('active', j === i));
+  mount.innerHTML = '';
+
+  const fig = document.createElement('figure');
+  const bar = document.createElement('div');
+  bar.className = 'svg-toolbar';
+  const rbtn = document.createElement('button');
+  rbtn.textContent = 'Reset View';
+  bar.appendChild(rbtn);
+  fig.appendChild(bar);
+
+  const svg = el('svg', { viewBox: '0 0 ' + f.vw + ' ' + f.vh, width: f.vw, height: f.vh });
+  const defs = el('defs', {});
+  [['fArr', '#444'], ['fArrE', '#8b1a1a'], ['fArrD', '#666']].forEach(([id, c]) => {
+    const m = el('marker', { id, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' });
+    m.appendChild(el('path', { d: 'M0,0 L10,5 L0,10 z', fill: c }));
+    defs.appendChild(m);
+  });
+  svg.appendChild(defs);
+  const vp = el('g', {});
+  svg.appendChild(vp);
+  f.edges.forEach(e => flowEdge(vp, e));
+  f.nodes.forEach(n => flowNode(vp, n));
+  if (f.next) vp.appendChild(txt(f.vw / 2, f.vh - 12, '→ ' + f.next, { italic: true, fill: '#888', size: 11 }));
+  fig.appendChild(svg);
+
+  const cap = document.createElement('figcaption');
+  cap.textContent = f.caption;
+  fig.appendChild(cap);
+  mount.appendChild(fig);
+
+  const pz = panzoom(svg, vp, f.vw, f.vh, 1, 0, 0);
+  rbtn.addEventListener('click', pz.reset);
+
+  // step table
+  const tbl = document.createElement('table');
+  tbl.className = 'steps';
+  tbl.innerHTML = '<thead><tr><th style="width:36px">Step</th><th>Function</th><th>File Path</th><th>Role in Flow</th></tr></thead>';
+  const tb = document.createElement('tbody');
+  f.steps.forEach(s => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + s[0] + '</td><td class="mono">' + s[1] + '</td><td class="mono">' + s[2] + '</td><td>' + s[3] + '</td>';
+    tb.appendChild(tr);
+  });
+  tbl.appendChild(tb);
+  mount.appendChild(tbl);
+
+  // view source toggle
+  const tg = document.createElement('div');
+  tg.className = 'srcToggle';
+  const tbtn = document.createElement('button');
+  tbtn.textContent = 'View SVG Source';
+  tbtn.style.cssText = 'font-family:inherit;font-size:11px;padding:4px 10px;background:#fff;border:1px solid #ccc;border-radius:4px;cursor:pointer;';
+  const pre = document.createElement('pre');
+  tbtn.addEventListener('click', () => {
+    if (!pre.textContent) pre.textContent = svg.outerHTML;
+    tg.classList.toggle('open');
+  });
+  tg.appendChild(tbtn);
+  tg.appendChild(pre);
+  mount.appendChild(tg);
+}
+
+showFlow(0);
+})();
+</script>
+</body>
+</html>

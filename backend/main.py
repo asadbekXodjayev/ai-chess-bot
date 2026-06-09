@@ -6,7 +6,7 @@ frontend. The bot move is computed by `ai_engine` (pure-Python search, no torch)
 """
 
 import logging
-from typing import Optional
+import os
 
 import chess
 from fastapi import FastAPI, HTTPException
@@ -23,11 +23,14 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Chess AI Bot API", version="2.0")
 
+_extra_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173", "http://localhost:3000",
         "http://127.0.0.1:5173", "http://127.0.0.1:3000",
+        *_extra_origins,
     ],
     allow_credentials=True,
     allow_methods=["*"],

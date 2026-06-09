@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chess AI Bot — Project Overview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'IBM Plex Sans', sans-serif; background: #fafbfc; color: #333; }
+  code, .mono { font-family: 'IBM Plex Mono', monospace; }
+
+  nav { position: fixed; top: 0; left: 0; right: 0; height: 48px; background: #ffffff;
+        border-bottom: 1px solid #ddd; display: flex; align-items: center; padding: 0 24px; z-index: 100; }
+  nav .brand { font-size: 14px; font-weight: 600; }
+  nav .links { flex: 1; display: flex; justify-content: center; gap: 28px; }
+  nav .links a { font-size: 13px; color: #333; text-decoration: none; }
+  nav .links a.active { color: #2a6099; text-decoration: underline; }
+  nav .links a:hover { color: #2a6099; }
+  nav .stamp { font-size: 11px; color: #999; }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 88px 24px 64px; }
+
+  header.cover { text-align: center; margin-bottom: 40px; }
+  header.cover h1 { font-size: 42px; font-weight: 600; margin: 0 0 8px; letter-spacing: -0.5px; }
+  header.cover .subtitle { font-size: 16px; color: #666; margin: 0 0 6px; }
+  header.cover .gen { font-size: 11px; color: #999; font-family: 'IBM Plex Mono', monospace; }
+
+  section { margin-bottom: 48px; }
+  section > h2 { font-size: 13px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase;
+                 color: #666; border-bottom: 1px solid #ddd; padding-bottom: 8px; }
+
+  figure { margin: 0; background: #fff; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
+  figure svg { display: block; width: 100%; height: auto; cursor: grab; }
+  figure svg:active { cursor: grabbing; }
+  figcaption { font-size: 12px; color: #666; padding: 10px 14px; border-top: 1px solid #eee; }
+  .svg-toolbar { display: flex; justify-content: flex-end; padding: 6px 8px; border-bottom: 1px solid #eee; gap: 8px; }
+  .svg-toolbar button { font-family: 'IBM Plex Sans', sans-serif; font-size: 11px; padding: 4px 10px;
+       background: #fff; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; color: #333; }
+  .svg-toolbar button:hover { border-color: #2a6099; color: #2a6099; }
+
+  table.tech { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #ddd; border-radius: 4px; }
+  table.tech th { text-align: left; font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+                  color: #666; padding: 10px 14px; border-bottom: 2px solid #ddd; font-weight: 600; }
+  table.tech td { padding: 9px 14px; border-bottom: 1px solid #eee; font-size: 13px; vertical-align: top; }
+  table.tech tr:last-child td { border-bottom: none; }
+  table.tech td.cat { color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  table.tech td .mono { font-size: 12px; }
+  table.tech td.src { font-size: 11.5px; color: #777; font-family: 'IBM Plex Mono', monospace; }
+
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .card { display: block; background: #fff; border: 1px solid #ddd; border-radius: 8px;
+          padding: 18px 20px; text-decoration: none; color: inherit; transition: border-color .15s; }
+  .card:hover { border-color: #2a6099; }
+  .card h3 { margin: 0 0 6px; font-size: 15px; color: #2a6099; font-weight: 600; }
+  .card p { margin: 0; font-size: 13px; color: #666; line-height: 1.45; }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="brand">Chess AI Bot</span>
+  <span class="links">
+    <a href="index.html" class="active">Overview</a>
+    <a href="file-architecture.html">File Architecture</a>
+    <a href="system-design.html">System Design</a>
+  </span>
+  <span class="stamp">Generated 2026-06-04T16:17:46+05:00</span>
+</nav>
+
+<main>
+  <header class="cover">
+    <h1>Chess AI Bot</h1>
+    <p class="subtitle">Python / FastAPI backend (API v2.0) · React 18 / Vite frontend (chess-frontend v1.0.0) · pure-Python classical chess engine</p>
+    <p class="gen">Generated 2026-06-04T16:17:46+05:00</p>
+  </header>
+
+  <section>
+    <h2>Runtime Architecture Overview</h2>
+    <figure>
+      <div class="svg-toolbar"><button id="resetView">Reset View</button></div>
+      <svg id="overview" viewBox="0 0 1040 790" width="1040" height="790" aria-label="Runtime architecture topology">
+        <defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#444"/>
+          </marker>
+          <marker id="arrD" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#888"/>
+          </marker>
+        </defs>
+        <g id="viewport"></g>
+      </svg>
+      <figcaption>
+        Web application topology detected from <code>backend/main.py</code>, <code>backend/ai_engine.py</code>,
+        <code>frontend/src/App.jsx</code> and <code>frontend/vite.config.js</code>. The backend is stateless —
+        the board position (FEN) travels in every request; no database, cache server, or message broker exists.
+        Dashed node = inferred from deployment docs (<code>description.md</code>), not from running config.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>Technology Table</h2>
+    <table class="tech">
+      <thead><tr><th>Component</th><th>Technology</th><th>Version</th><th>Source of Detection</th></tr></thead>
+      <tbody>
+        <tr><td class="cat">Backend · Language</td><td>Python (CPython)</td><td class="mono">3.10+ required · 3.14 in use</td><td class="src">description.md; backend/__pycache__/*.cpython-314.pyc</td></tr>
+        <tr><td class="cat">Backend · Web Framework</td><td>FastAPI</td><td class="mono">&gt;=0.109.0</td><td class="src">backend/requirements.txt; import in main.py</td></tr>
+        <tr><td class="cat">Backend · ASGI Server</td><td>Uvicorn [standard]</td><td class="mono">&gt;=0.27.0</td><td class="src">backend/requirements.txt; main.py __main__</td></tr>
+        <tr><td class="cat">Backend · Chess Rules</td><td>python-chess</td><td class="mono">&gt;=1.999</td><td class="src">backend/requirements.txt; import chess in ai_engine.py</td></tr>
+        <tr><td class="cat">Backend · Validation</td><td>Pydantic</td><td class="mono">&gt;=2.5.0</td><td class="src">backend/requirements.txt; BaseModel in main.py</td></tr>
+        <tr><td class="cat">Frontend · UI Library</td><td>React</td><td class="mono">^18.2.0</td><td class="src">frontend/package.json dependencies</td></tr>
+        <tr><td class="cat">Frontend · DOM Renderer</td><td>react-dom</td><td class="mono">^18.2.0</td><td class="src">frontend/package.json dependencies</td></tr>
+        <tr><td class="cat">Frontend · Board Component</td><td>react-chessboard</td><td class="mono">^4.3.5</td><td class="src">frontend/package.json; import in App.jsx</td></tr>
+        <tr><td class="cat">Frontend · Chess Rules</td><td>chess.js</td><td class="mono">^1.0.0-beta.8</td><td class="src">frontend/package.json; import in App.jsx</td></tr>
+        <tr><td class="cat">Frontend · Build Tool</td><td>Vite</td><td class="mono">^5.0.8</td><td class="src">frontend/package.json devDependencies; vite.config.js</td></tr>
+        <tr><td class="cat">Frontend · React Plugin</td><td>@vitejs/plugin-react</td><td class="mono">^4.2.1</td><td class="src">frontend/package.json; vite.config.js</td></tr>
+        <tr><td class="cat">Frontend · CSS Framework</td><td>Tailwind CSS</td><td class="mono">^3.4.0</td><td class="src">frontend/package.json; tailwind.config.js; index.css</td></tr>
+        <tr><td class="cat">Frontend · CSS Pipeline</td><td>PostCSS + Autoprefixer</td><td class="mono">^8.4.32 / ^10.4.16</td><td class="src">frontend/package.json; postcss.config.js</td></tr>
+        <tr><td class="cat">Frontend · Audio</td><td>Web Audio API (synthesized, no assets)</td><td class="mono">browser-native</td><td class="src">SoundController class in App.jsx</td></tr>
+        <tr><td class="cat">Legacy · ML Framework</td><td>PyTorch (NOT installed; training scripts only)</td><td class="mono"><i>commented out</i> (&gt;=2.0.0)</td><td class="src">backend/requirements.txt lines 7–11; train_ai*.py / train_model.py imports</td></tr>
+        <tr><td class="cat">Legacy · Model Artifacts</td><td>chess_model.pth (2.2 MB) · chess_model_fast.pth (204 KB)</td><td class="mono">unused at runtime</td><td class="src">backend/ directory; never loaded by ai_engine.py</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Diagrams</h2>
+    <div class="cards">
+      <a class="card" href="file-architecture.html">
+        <h3>File Architecture</h3>
+        <p>Zoomable tree of every source file, config, and document — with per-file imports, exports, roles, and reverse dependencies.</p>
+      </a>
+      <a class="card" href="system-design.html">
+        <h3>System Design &amp; Flows</h3>
+        <p>Network-topology view of all runtime components, ports, and protocols — plus step-by-step SVG flowcharts for the five most significant application flows (player move, bot round-trip, engine search, errors, startup).</p>
+      </a>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  const NS = 'http://www.w3.org/2000/svg';
+  const vp = document.getElementById('viewport');
+  const svg = document.getElementById('overview');
+
+  function el(tag, attrs, text) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  // ---- zones --------------------------------------------------------------
+  const zones = [
+    { x: 40, y: 60,  w: 960, h: 150, label: 'EXTERNAL / CLIENT' },
+    { x: 40, y: 240, w: 960, h: 145, label: 'EDGE / STATIC SERVE' },
+    { x: 40, y: 415, w: 960, h: 145, label: 'APPLICATION' },
+    { x: 40, y: 590, w: 960, h: 150, label: 'IN-PROCESS ENGINE STATE (no persistent data tier)' },
+  ];
+  zones.forEach(z => {
+    vp.appendChild(el('rect', { x: z.x, y: z.y, width: z.w, height: z.h,
+      fill: 'rgba(0,0,0,0.02)', stroke: '#aaa', 'stroke-width': 1, 'stroke-dasharray': '5,4' }));
+    vp.appendChild(el('text', { x: z.x + 12, y: z.y + 20, 'font-family': "'IBM Plex Sans',sans-serif",
+      'font-size': 13, fill: '#666', style: 'font-variant: small-caps; letter-spacing:1px;' }, z.label.toLowerCase()));
+  });
+
+  // ---- hardware-style node ------------------------------------------------
+  function deviceNode(cx, top, label, sub, opts) {
+    opts = opts || {};
+    const w = opts.w || 110, h = opts.h || 36;
+    const x = cx - w / 2;
+    const g = el('g', { class: 'node' });
+    g.appendChild(el('rect', { x, y: top, width: w, height: h, rx: 4, ry: 4,
+      fill: opts.fill || '#cde4f5', stroke: opts.stroke || '#7aaecc', 'stroke-width': 1,
+      'stroke-dasharray': opts.dashed ? '4,3' : 'none' }));
+    // port-array lines
+    const nLines = 7;
+    for (let i = 1; i <= nLines; i++) {
+      const ly = top + (h * i) / (nLines + 1);
+      g.appendChild(el('line', { x1: x + 8, y1: ly, x2: x + w - 20, y2: ly,
+        stroke: opts.lineColor || '#9fc2dd', 'stroke-width': 0.8 }));
+    }
+    // port indicator at right edge
+    g.appendChild(el('rect', { x: x + w - 14, y: top + h / 2 - 4, width: 8, height: 8,
+      fill: '#ffffff', stroke: opts.stroke || '#7aaecc', 'stroke-width': 1 }));
+    g.appendChild(el('text', { x: cx, y: top + h + 15, 'text-anchor': 'middle',
+      'font-family': "'IBM Plex Sans',sans-serif", 'font-size': 11.5, fill: '#333', 'font-weight': 600,
+      stroke: '#ffffff', 'stroke-width': 3.5, 'paint-order': 'stroke', 'stroke-linejoin': 'round' }, label));
+    if (sub) g.appendChild(el('text', { x: cx, y: top + h + 28, 'text-anchor': 'middle',
+      'font-family': "'IBM Plex Mono',monospace", 'font-size': 9, fill: '#666',
+      stroke: '#ffffff', 'stroke-width': 3, 'paint-order': 'stroke', 'stroke-linejoin': 'round' }, sub));
+    vp.appendChild(g);
+  }
+
+  // ---- orthogonal edges ---------------------------------------------------
+  function edge(d, opts) {
+    opts = opts || {};
+    const p = el('path', { d, fill: 'none', stroke: opts.color || '#444', 'stroke-width': 1.5,
+      'marker-end': 'url(#' + (opts.color ? 'arrD' : 'arr') + ')',
+      'stroke-dasharray': opts.dashed ? '6,4' : 'none' });
+    if (opts.bidi) p.setAttribute('marker-start', 'url(#' + (opts.color ? 'arrD' : 'arr') + ')');
+    vp.appendChild(p);
+    if (opts.label) {
+      const lines = Array.isArray(opts.label) ? opts.label : [opts.label];
+      const g = el('g', {});
+      const fw = 5.3, fh = 12;
+      const maxLen = Math.max(...lines.map(s => s.length));
+      const bw = maxLen * fw + 8, bh = lines.length * fh + 4;
+      let bx = opts.lx - bw / 2, by = opts.ly - bh / 2;
+      const r = el('rect', { x: bx, y: by, width: bw, height: bh, fill: '#ffffff' });
+      g.appendChild(r);
+      lines.forEach((s, i) => {
+        g.appendChild(el('text', { x: opts.lx, y: by + 12 + i * fh, 'text-anchor': 'middle',
+          'font-family': "'IBM Plex Mono',monospace", 'font-size': 9, fill: '#555',
+          stroke: '#ffffff', 'stroke-width': 2.5, 'paint-order': 'stroke', 'stroke-linejoin': 'round' }, s));
+      });
+      if (opts.vert) g.setAttribute('transform', 'rotate(-90 ' + opts.lx + ' ' + opts.ly + ')');
+      vp.appendChild(g);
+    }
+  }
+
+  // Browser <-> Vite dev server
+  edge('M480 146 V 225 H 240 V 290', { bidi: true,
+    label: ['HTTP :5173 · Copper/loopback', 'JS/CSS module bundle (dev)'], lx: 350, ly: 225 });
+  // Browser <-> static host (inferred, prod)
+  edge('M560 146 V 225 H 800 V 290', { bidi: true, dashed: true, color: '#888',
+    label: ['HTTPS :443 — built dist/ (prod)', 'per description.md  [inferred]'], lx: 690, ly: 225 });
+  // Browser <-> FastAPI (direct, hardcoded API_URL)
+  edge('M520 146 V 437 H 400 V 465', { bidi: true,
+    label: ['HTTP :8000 · JSON', 'POST /api/bot-move', 'GET /api/levels'], lx: 520, ly: 300, vert: true });
+  // Vite -> FastAPI dev proxy (configured but unused)
+  edge('M240 326 V 483 H 345', { dashed: true, color: '#888',
+    label: ['dev proxy /api → :8000', '(configured, unused —', 'API_URL is hardcoded)'], lx: 240, ly: 410, vert: true });
+  // FastAPI <-> Engine
+  edge('M455 483 H 635', { bidi: true,
+    label: ['in-process call', 'engine.search(fen, level) → SearchResult'], lx: 545, ly: 460 });
+  // Engine -> TT
+  edge('M660 501 V 560 H 400 V 640', {
+    label: ['probe/store — board._transposition_key()'], lx: 520, ly: 560 });
+  // Engine -> Opening book
+  edge('M690 501 V 605 H 640 V 640', { label: ['FEN-prefix lookup'], lx: 700, ly: 590 });
+  // Engine -> LEVELS
+  edge('M720 501 V 575 H 870 V 640', { label: ['preset read: time/depth/temperature/blunder'], lx: 800, ly: 575 });
+
+  // ---- nodes (drawn AFTER edges so device bodies + labels sit on top) -----
+  deviceNode(520, 110, 'Browser Client', 'React 18 SPA · chess.js · react-chessboard');
+  deviceNode(240, 290, 'Vite Dev Server', ':5173 · vite ^5.0.8');
+  deviceNode(800, 290, 'Static Host (prod)', 'nginx / Vercel — serves dist/  [inferred]', { dashed: true, fill: '#e3eef7' });
+  deviceNode(400, 465, 'FastAPI · Uvicorn', ':8000 · backend/main.py');
+  deviceNode(690, 465, 'ChessEngine', 'backend/ai_engine.py · pure Python');
+  deviceNode(400, 640, 'Transposition Table', 'dict — rebuilt every search()');
+  deviceNode(640, 640, 'Opening Book', 'OPENING_BOOK · 8 FEN keys');
+  deviceNode(870, 640, 'LEVELS Presets', '6 levels · ~600–2200 Elo');
+
+  // ---- pan & zoom ---------------------------------------------------------
+  let s = 1, tx = 0, ty = 0, drag = null;
+  function apply() { vp.setAttribute('transform', 'translate(' + tx + ',' + ty + ') scale(' + s + ')'); }
+  svg.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    const r = svg.getBoundingClientRect();
+    const mx = (e.clientX - r.left) * (1040 / r.width), my = (e.clientY - r.top) * (790 / r.height);
+    const f = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    const ns = Math.min(8, Math.max(0.25, s * f));
+    tx = mx - (mx - tx) * (ns / s); ty = my - (my - ty) * (ns / s); s = ns; apply();
+  }, { passive: false });
+  svg.addEventListener('mousedown', function (e) { drag = { x: e.clientX, y: e.clientY, tx, ty }; });
+  window.addEventListener('mousemove', function (e) {
+    if (!drag) return;
+    const r = svg.getBoundingClientRect();
+    tx = drag.tx + (e.clientX - drag.x) * (1040 / r.width);
+    ty = drag.ty + (e.clientY - drag.y) * (790 / r.height);
+    apply();
+  });
+  window.addEventListener('mouseup', function () { drag = null; });
+  document.getElementById('resetView').addEventListener('click', function () { s = 1; tx = 0; ty = 0; apply(); });
+})();
+</script>
+</body>
+</html>
