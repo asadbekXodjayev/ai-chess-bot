@@ -151,7 +151,7 @@ class SoundController {
 
 const soundController = new SoundController();
 
-const API_URL = 'http://localhost:8000';
+const API_URL = 'http://34.9.1.205:8000';
 
 // Time control configurations (in seconds)
 const TIME_CONTROLS = {
